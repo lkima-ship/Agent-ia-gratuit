@@ -1,0 +1,104 @@
+# check_github_structure.py
+import os
+import json
+import requests
+from pathlib import Path
+
+def get_github_structure(owner, repo, path=""):
+    """Récupère la structure d'un dépôt GitHub via API"""
+    url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
+    headers = {"Accept": "application/vnd.github.v3+json"}
+    
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        contents = response.json()
+        
+        structure = {}
+        for item in contents:
+            if item["type"] == "dir":
+                structure[f"📁 {item['name']}/"] = get_github_structure(
+                    owner, repo, f"{path}/{item['name']}"
+                )
+            else:
+                structure[f"📄 {item['name']}"] = None
+        
+        return structure
+    except Exception as e:
+        print(f"❌ Erreur API GitHub: {e}")
+        return {}
+
+def get_local_structure(path="."):
+    """Récupère la structure locale"""
+    structure = {}
+    ignore = {".git", "__pycache__", "venv", ".venv", ".github"}
+    
+    for item in sorted(os.listdir(path)):
+        if item in ignore:
+            continue
+        
+        full_path = os.path.join(path, item)
+        if os.path.isdir(full_path):
+            structure[f"📁 {item}/"] = get_local_structure(full_path)
+        else:
+            structure[f"📄 {item}"] = None
+    
+    return structure
+
+def compare_structures(github_struct, local_struct, path=""):
+    """Compare deux structures"""
+    print(f"\n🔍 COMPARAISON {path or 'racine'}:")
+    print("=" * 50)
+    
+    all_items = set(list(github_struct.keys()) + list(local_struct.keys()))
+    
+    for item in sorted(all_items):
+        in_github = item in github_struct
+        in_local = item in local_struct
+        
+        if in_github and in_local:
+            print(f"✅ {item}")
+            # Comparer récursivement si c'est un dossier
+            if github_struct[item] and local_struct[item]:
+                compare_structures(
+                    github_struct[item], 
+                    local_struct[item], 
+                    f"{path}/{item.replace('📁 ', '').replace('📄 ', '').replace('/', '')}"
+                )
+        elif in_github and not in_local:
+            print(f"🌐 SEULEMENT SUR GITHUB: {item}")
+        elif not in_github and in_local:
+            print(f"💻 SEULEMENT EN LOCAL: {item}")
+
+if __name__ == "__main__":
+    # Configuration
+    GITHUB_OWNER = "lkima-ship"
+    GITHUB_REPO = "Agent-ia-gratuit"
+    
+    print("🔄 Récupération de la structure GitHub...")
+    github_structure = get_github_structure(GITHUB_OWNER, GITHUB_REPO)
+    
+    print("🔄 Analyse de la structure locale...")
+    local_structure = get_local_structure()
+    
+    # Afficher les structures
+    print("\n" + "="*60)
+    print("🌐 STRUCTURE GITHUB")
+    print("="*60)
+    print(json.dumps(github_structure, indent=2))
+    
+    print("\n" + "="*60)
+    print("💻 STRUCTURE LOCALE")
+    print("="*60)
+    print(json.dumps(local_structure, indent=2))
+    
+    # Comparer
+    compare_structures(github_structure, local_structure)
+    
+    print("\n" + "="*60)
+    print("📊 SYNTHÈSE")
+    print("="*60)
+    print(f"Fichiers sur GitHub: {sum(1 for k in github_structure if '📄' in k)}")
+    print(f"Dossiers sur GitHub: {sum(1 for k in github_structure if '📁' in k)}")
+    print(f"Fichiers en local: {sum(1 for k in local_structure if '📄' in k)}")
+    print(f"Dossiers en local: {sum(1 for k in local_structure if '📁' in k)}")
