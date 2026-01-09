@@ -1,4 +1,27 @@
-.env
-__pycache__/
-*.pyc
+# Environnements virtuels
 venv/
+env/
+.venv/
+
+# Fichiers de configuration sensible
+.env
+*.key
+*.pem
+credentials.json
+token.pickle
+
+# Cache Python
+__pycache__/
+*.py[cod]
+
+# Logs
+*.log
+logs/
+
+# Base de données
+*.db
+*.sqlite3
+
+# Dossiers temporaires
+temp/
+tmp/
