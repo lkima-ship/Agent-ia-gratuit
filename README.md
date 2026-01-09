@@ -1,30 +1,24 @@
-# 🤖 Assistant IA 100% Gratuit
+# Agent IA Professionnel
 
-[![GitHub Pages](https://img.shields.io/badge/GitHub-Pages-blue)](https://lkima-ship.github.io/Agent-ia-gratuit/)
-[![Python](https://img.shields.io/badge/Python-3.8+-green)](https://python.org)
-[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+Un agent IA intelligent pour automatiser la gestion des emails, rendez-vous et notes vocales.
 
-Assistant IA automatique **100% gratuit** pour :
-- 📧 **Répondre aux emails** automatiquement
-- 📅 **Gérer les rendez-vous** dans Google Calendar
-- 🎤 **Transcrire et traiter** les messages vocaux
+## 🚀 Premiers Pas
 
-## 🚀 Démo en ligne
-🌐 **Site web** : [https://lkima-ship.github.io/Agent-ia-gratuit/](https://lkima-ship.github.io/Agent-ia-gratuit/)
-
-## ⚡ Installation locale
+### 1. Installation
 
 ```bash
-# 1. Clone le dépôt
-git clone https://github.com/lkima-ship/Agent-ia-gratuit.git
-cd Agent-ia-gratuit
+# Cloner le projet
+git clone <votre-repo>
+cd Agent-IA-Professionnel
 
-# 2. Installe les dépendances
+# Créer environnement virtuel
+python -m venv venv
+
+# Activer l'environnement
+# Windows:
+venv\Scripts\activate
+# Mac/Linux:
+source venv/bin/activate
+
+# Installer les dépendances
 pip install -r requirements.txt
-
-# 3. Configure
-cp .env.example .env
-# Édite .env avec tes clés API
-
-# 4. Lance
-python src/main.py
