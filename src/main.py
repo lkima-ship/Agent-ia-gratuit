@@ -1,72 +1,92 @@
 #!/usr/bin/env python3
 """
-Agent IA Professionnel - Point d'entrée principal
-Version basique - Étape 1
+Agent IA Gratuit - Point d'entrée principal
+Un assistant intelligent pour gérer emails, rendez-vous et notes vocales
 """
 
 import asyncio
-import time
-from loguru import logger
 import sys
+import os
+from pathlib import Path
 
-# Ajouter le dossier src au path
-sys.path.append('src')
+# Ajouter le répertoire parent au chemin Python
+sys.path.append(str(Path(__file__).parent.parent))
 
-from core.agent import PersonalAIAgent
-from modules.email_processor import EmailProcessor
-from config.settings import settings
+from src.core.agent import PersonalAIAgent
+from src.modules.email_processor import EmailProcessor
+from src.modules.ai_processor import AIProcessor
+from config.settings import config
+import logging
+
+# Configuration du logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('storage/logs/agent.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 class AgentOrchestrator:
-    """Orchestrateur de l'agent IA"""
+    """Orchestrateur principal de l'agent IA"""
     
     def __init__(self):
-        self.agent = PersonalAIAgent(name="Assistant Personnel")
-        self.email_processor = EmailProcessor(
-            imap_server=settings.EMAIL_IMAP_SERVER,
-            port=settings.EMAIL_IMAP_PORT
-        )
-        self.running = False
+        self.agent = None
+        self.email_processor = None
+        self.ai_processor = None
+        self.is_running = False
+        self.tasks = []
         
-        logger.info("=" * 50)
-        logger.info(" 🚀 INITIALISATION AGENT IA PROFESSIONNEL")
-        logger.info("=" * 50)
+        logger.info("=" * 60)
+        logger.info("🤖 AGENT IA GRATUIT - INITIALISATION")
+        logger.info("=" * 60)
     
-    def check_configuration(self) -> bool:
-        """Vérification de la configuration"""
-        logger.info("🔧 Vérification de la configuration...")
-        
-        # Vérifier les variables d'environnement
-        required_vars = ['EMAIL_ADDRESS', 'EMAIL_PASSWORD']
-        missing = []
-        
-        for var in required_vars:
-            if not getattr(settings, var, None):
-                missing.append(var)
-        
-        if missing:
-            logger.error(f"❌ Variables manquantes: {', '.join(missing)}")
-            logger.info("Copiez .env.example en .env et remplissez les valeurs")
-            return False
-        
-        logger.success("✅ Configuration validée")
-        return True
-    
-    async def initialize_email(self) -> bool:
-        """Initialisation du module email"""
-        logger.info("📧 Initialisation du module email...")
-        
-        if self.email_processor.connect(settings.EMAIL_ADDRESS, settings.EMAIL_PASSWORD):
-            logger.success("✅ Module email initialisé")
+    def initialize(self):
+        """Initialisation des composants"""
+        try:
+            # 1. Initialiser l'agent central
+            self.agent = PersonalAIAgent(name="Assistant IA")
+            logger.info("✅ Agent IA initialisé")
+            
+            # 2. Initialiser le processeur AI
+            self.ai_processor = AIProcessor()
+            logger.info("✅ Processeur AI initialisé")
+            
+            # 3. Initialiser le processeur email (si configuré)
+            if config.EMAIL_ADDRESS and config.EMAIL_PASSWORD:
+                self.email_processor = EmailProcessor()
+                logger.info("✅ Module email prêt pour initialisation")
+            else:
+                logger.warning("⚠️  Email non configuré dans .env")
+            
             return True
-        else:
-            logger.error("❌ Échec initialisation email")
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur d'initialisation: {e}")
             return False
     
-    async def email_monitoring_loop(self, interval: int = 300):
-        """Boucle de surveillance des emails"""
+    async def email_monitoring_task(self, interval=300):
+        """Tâche de surveillance des emails"""
+        if not self.email_processor:
+            logger.warning("Module email non disponible")
+            return
+        
+        try:
+            # Se connecter aux emails
+            if self.email_processor.connect():
+                logger.info("📧 Connecté au serveur email")
+            else:
+                logger.error("❌ Échec de connexion email")
+                return
+        except Exception as e:
+            logger.error(f"Erreur connexion email: {e}")
+            return
+        
         logger.info(f"👁️ Surveillance emails activée (intervalle: {interval}s)")
         
-        while self.running:
+        while self.is_running:
             try:
                 # Récupérer les nouveaux emails
                 emails = self.email_processor.fetch_unread_emails(limit=5)
@@ -75,20 +95,7 @@ class AgentOrchestrator:
                     logger.info(f"📬 {len(emails)} nouveau(x) email(s) trouvé(s)")
                     
                     for email in emails:
-                        # Analyser avec l'agent
-                        analysis = self.agent.analyze_text(email['body'])
-                        intent = self.agent.classify_intent(email['body'])
-                        
-                        logger.info(f"""
-                        📨 Nouvel email:
-                        De: {email['from']}
-                        Sujet: {email['subject']}
-                        Intention détectée: {intent}
-                        Résumé: {analysis['summary']}
-                        """)
-                        
-                        # Marquer comme lu (optionnel)
-                        # self.email_processor.mark_as_read(email['id'])
+                        await self.process_email(email)
                 
                 # Attendre avant la prochaine vérification
                 await asyncio.sleep(interval)
@@ -97,51 +104,162 @@ class AgentOrchestrator:
                 logger.error(f"Erreur surveillance emails: {e}")
                 await asyncio.sleep(60)  # Attendre 1 minute en cas d'erreur
     
+    async def process_email(self, email_data):
+        """Traiter un email reçu"""
+        try:
+            logger.info(f"📨 Traitement email: {email_data['subject']}")
+            
+            # Analyser le contenu avec AI
+            analysis = await self.ai_processor.analyze_email(
+                email_data['subject'],
+                email_data['body']
+            )
+            
+            logger.info(f"📊 Analyse: Priorité: {analysis.get('priority')}, "
+                       f"Catégorie: {analysis.get('category')}")
+            
+            # Décider de l'action
+            action = await self.determine_email_action(email_data, analysis)
+            
+            # Exécuter l'action
+            if action:
+                await self.execute_action(action, email_data)
+            
+            # Marquer comme lu
+            self.email_processor.mark_as_read(email_data['id'])
+            
+        except Exception as e:
+            logger.error(f"Erreur traitement email: {e}")
+    
+    async def determine_email_action(self, email_data, analysis):
+        """Déterminer l'action à prendre pour un email"""
+        priority = analysis.get('priority', 'low')
+        category = analysis.get('category', 'other')
+        
+        actions = []
+        
+        if priority == 'high':
+            actions.append('notify')
+        
+        if category == 'meeting_request':
+            actions.append('schedule_meeting')
+        elif category == 'question':
+            actions.append('generate_response')
+        
+        return {
+            'email_id': email_data['id'],
+            'sender': email_data['from'],
+            'subject': email_data['subject'],
+            'actions': actions,
+            'analysis': analysis
+        }
+    
+    async def execute_action(self, action, email_data):
+        """Exécuter une action sur un email"""
+        for action_type in action['actions']:
+            if action_type == 'notify':
+                self.notify_user(email_data)
+            elif action_type == 'schedule_meeting':
+                await self.schedule_meeting_from_email(email_data)
+            elif action_type == 'generate_response':
+                await self.generate_email_response(email_data)
+    
+    def notify_user(self, email_data):
+        """Notifier l'utilisateur d'un email important"""
+        logger.info(f"🔔 Notification: Email important de {email_data['from']}: "
+                   f"{email_data['subject']}")
+        # Ici, on pourrait envoyer une notification push, SMS, etc.
+    
+    async def schedule_meeting_from_email(self, email_data):
+        """Programmer un rendez-vous depuis un email"""
+        logger.info(f"📅 Tentative d'extraction de rendez-vous depuis email")
+        # À implémenter avec le module calendrier
+    
+    async def generate_email_response(self, email_data):
+        """Générer une réponse automatique"""
+        logger.info(f"📝 Génération de réponse pour email")
+        # À implémenter avec AI
+    
+    async def voice_processing_task(self):
+        """Tâche de traitement des notes vocales"""
+        logger.info("🎤 Module voix prêt")
+        # À implémenter
+    
+    async def calendar_monitoring_task(self):
+        """Tâche de surveillance du calendrier"""
+        logger.info("📅 Module calendrier prêt")
+        # À implémenter
+    
     async def run(self):
         """Exécution principale de l'agent"""
-        logger.info("🚀 Démarrage de l'agent...")
-        
-        # Vérifier la configuration
-        if not self.check_configuration():
+        # Initialiser les composants
+        if not self.initialize():
+            logger.error("Échec de l'initialisation. Arrêt.")
             return
         
-        # Initialiser les modules
-        email_ok = await self.initialize_email()
-        
-        if not email_ok:
-            logger.warning("⚠️  Agent démarré sans module email")
-        
-        # Démarrer la boucle principale
-        self.running = True
-        logger.success("🎉 Agent IA démarré avec succès!")
+        self.is_running = True
+        logger.info("🚀 Agent IA démarré avec succès!")
         
         try:
-            # Lancer la surveillance emails
-            if email_ok:
-                await self.email_monitoring_loop(interval=60)  # Vérifier toutes les minutes
+            # Démarrer les tâches en parallèle
+            tasks = []
             
-            # Boucle principale simple pour l'instant
-            while self.running:
-                # Ici on ajoutera d'autres tâches plus tard
-                await asyncio.sleep(1)
-                
+            # Tâche email si configuré
+            if self.email_processor:
+                tasks.append(self.email_monitoring_task(interval=60))
+            
+            # Tâche voix (placeholder)
+            tasks.append(self.voice_processing_task())
+            
+            # Tâche calendrier (placeholder)
+            tasks.append(self.calendar_monitoring_task())
+            
+            # Tâche de battement de cœur (health check)
+            tasks.append(self.heartbeat_task())
+            
+            # Exécuter toutes les tâches
+            await asyncio.gather(*tasks)
+            
         except KeyboardInterrupt:
             logger.info("🛑 Arrêt demandé par l'utilisateur")
+        except Exception as e:
+            logger.error(f"Erreur critique: {e}")
         finally:
-            self.cleanup()
+            await self.shutdown()
     
-    def cleanup(self):
-        """Nettoyage à l'arrêt"""
+    async def heartbeat_task(self):
+        """Tâche de santé pour montrer que l'agent est vivant"""
+        counter = 0
+        while self.is_running:
+            counter += 1
+            if counter % 10 == 0:  # Toutes les 10 itérations
+                logger.info("❤️  Agent IA en cours d'exécution...")
+            await asyncio.sleep(10)
+    
+    async def shutdown(self):
+        """Arrêt propre de l'agent"""
         logger.info("🧹 Nettoyage avant arrêt...")
-        self.running = False
-        self.email_processor.disconnect()
-        logger.info("👋 Agent arrêté")
+        self.is_running = False
+        
+        # Fermer les connexions
+        if self.email_processor:
+            self.email_processor.disconnect()
+        
+        logger.info("👋 Agent arrêté proprement")
 
-async def main():
+def main():
     """Point d'entrée principal"""
-    orchestrator = AgentOrchestrator()
-    await orchestrator.run()
+    # Créer les dossiers nécessaires
+    os.makedirs('storage/logs', exist_ok=True)
+    
+    try:
+        # Créer et exécuter l'orchestrateur
+        orchestrator = AgentOrchestrator()
+        asyncio.run(orchestrator.run())
+        
+    except Exception as e:
+        logger.error(f"Erreur fatale: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    # Démarrer l'agent
-    asyncio.run(main())
+    main()
