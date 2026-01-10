@@ -17,7 +17,6 @@ class EmailProcessor:
     
     def fetch_unread_emails(self, limit: int = 5) -> List[Dict[str, Any]]:
         """Récupère les emails non lus (simulé)"""
-        # Simulation
         return [
             {
                 "id": "1",
@@ -30,14 +29,11 @@ class EmailProcessor:
     
     def connect(self, server: str = "imap.gmail.com", port: int = 993) -> bool:
         """Simule la connexion au serveur email"""
-        time.sleep(0.5)  # Simulation
+        time.sleep(0.5)
         self.status = "connecté"
         return True
 
 if __name__ == "__main__":
-    # Test du module
     processor = EmailProcessor()
     print(processor.check_emails())
-    emails = processor.fetch_unread_emails()
-    print(f"Emails récupérés: {len(emails)}")
 EOF
