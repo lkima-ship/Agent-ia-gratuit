@@ -20,7 +20,7 @@ class PersonalAIAgent:
         return {
             "length": len(text),
             "words": len(text.split()),
-            "language": "fr",  # À améliorer
+            "language": "fr",
             "timestamp": datetime.now().isoformat()
         }
     
@@ -33,8 +33,7 @@ class PersonalAIAgent:
         }
 
 if __name__ == "__main__":
-    # Test de l'agent
     agent = PersonalAIAgent("Test Agent")
     print(agent.greet())
-    print(agent.analyze_text("Bonjour, comment ça va ?"))
 EOF
+
