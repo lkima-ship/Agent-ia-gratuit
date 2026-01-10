@@ -1,24 +1,15 @@
-# Agent IA Professionnel
+cat > README.md << 'EOF'
+# Agent IA Gratuit
 
-Un agent IA intelligent pour automatiser la gestion des emails, rendez-vous et notes vocales.
+Assistant intelligent pour automatiser :
+- 📧 Lecture et réponse aux emails
+- 🗓️ Prise de rendez-vous automatique
+- 🎤 Traitement des notes vocales
 
-## 🚀 Premiers Pas
-
-### 1. Installation
+## Installation
 
 ```bash
-# Cloner le projet
-git clone <votre-repo>
-cd Agent-IA-Professionnel
-
-# Créer environnement virtuel
-python -m venv venv
-
-# Activer l'environnement
-# Windows:
-venv\Scripts\activate
-# Mac/Linux:
+python3 -m venv venv
 source venv/bin/activate
-
-# Installer les dépendances
 pip install -r requirements.txt
+python src/main.py
