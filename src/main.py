@@ -1,54 +1,21 @@
-cat > src/main.py << 'EOF'
-#!/usr/bin/env python3
-"""
-Agent IA Gratuit - Point d'entrée principal
-"""
-
-def main():
-    print("🤖 Agent IA Gratuit")
-    print("===================")
-    print("Options disponibles:")
-    print("1. Démarrer le serveur web")
-    print("2. Afficher la structure")
-    print("3. Quitter")
-    
-    try:
-        choice = input("\nVotre choix (1-3): ")
-        
-        if choice == "1":
-            print("\n🚀 Démarrage du serveur web...")
-            try:
-                # Importer et exécuter le serveur
-                from src.simple_server import run_server
-                run_server()
-            except ImportError:
-                print("❌ Erreur: simple_server.py non trouvé")
-                print("Exécutez: python3 src/simple_server.py directement")
-                
-        elif choice == "2":
-            print("\n📁 Structure du projet:")
-            import os
-            for root, dirs, files in os.walk("."):
-                level = root.replace(".", "").count(os.sep)
-                indent = " " * 2 * level
-                print(f"{indent}{os.path.basename(root)}/")
-                subindent = " " * 2 * (level + 1)
-                for file in files:
-                    if file.endswith(".py"):
-                        print(f"{subindent}{file}")
-                        
-        elif choice == "3":
-            print("\nAu revoir! 👋")
-            return
-            
-        else:
-            print("\n⚠️ Choix invalide")
-            
-    except KeyboardInterrupt:
-        print("\n\nInterrompu par l'utilisateur")
-    except Exception as e:
-        print(f"\n❌ Erreur: {e}")
-
-if __name__ == "__main__":
-    main()
-EOF
+rm -f src/main.py
+echo '#!/usr/bin/env python3' > src/main.py
+echo '"""' >> src/main.py
+echo 'Point d entrée principal de l Agent IA Gratuit' >> src/main.py
+echo '"""' >> src/main.py
+echo '' >> src/main.py
+echo 'def main():' >> src/main.py
+echo '    print("🤖 AGENT IA GRATUIT")' >> src/main.py
+echo '    print("===================")' >> src/main.py
+echo '    print("Version: 1.0.0")' >> src/main.py
+echo '    print("Python: 3.13.1+")' >> src/main.py
+echo '    print("")' >> src/main.py
+echo '    print("Options disponibles:")' >> src/main.py
+echo '    print("1. python3 src/web_app.py - Serveur API")' >> src/main.py
+echo '    print("2. python3 simple_web_server.py - Serveur Web")' >> src/main.py
+echo '    print("3. python3 menu.py - Menu interactif")' >> src/main.py
+echo '    print("")' >> src/main.py
+echo '    print("✅ Installation terminée avec succès!")' >> src/main.py
+echo '' >> src/main.py
+echo 'if __name__ == "__main__":' >> src/main.py
+echo '    main()' >> src/main.py
