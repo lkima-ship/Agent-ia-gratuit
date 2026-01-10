@@ -1,19 +1,4 @@
-# Bases
-python-dotenv==1.0.0
-loguru==0.7.2
-
-# Email
-imap-tools==1.0.0
-beautifulsoup4==4.12.2
-
-# Calendrier
-google-api-python-client==2.108.0
-google-auth-httplib2==0.1.1
-google-auth-oauthlib==1.1.0
-
-# Voix
-SpeechRecognition==3.10.0
-pyttsx3==2.90
-
-# AI basique
-openai==1.6.1
+cat > requirements.txt << 'EOF'
+python-dotenv>=1.0.0
+loguru>=0.7.0
+EOF
