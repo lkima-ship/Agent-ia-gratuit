@@ -23,3 +23,14 @@ print("2. Développer les fonctionnalités d'email")
 print("3. Ajouter le module calendrier")
 print("4. Ajouter le module notes vocales")
 EOF
+# Ajouter à la fin de main.py
+cat >> src/main.py << 'EOF'
+
+# Code additionnel
+print("\n📁 Structure complète créée avec succès !")
+print("Prochaines étapes :")
+print("1. Configurer .env avec vos clés API")
+print("2. Développer les fonctionnalités d'email")
+print("3. Ajouter le module calendrier")
+print("4. Ajouter le module notes vocales")
+EOF
