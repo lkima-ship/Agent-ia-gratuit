@@ -1,27 +1,32 @@
-# Environnements virtuels
+# Créer .gitignore avec plusieurs lignes
+cat > .gitignore << 'EOF'
+# Fichiers sensibles
+.env
+.env.*
+
+# Clés API
+*.key
+*.pem
+
+# Environnements Python
 venv/
 env/
 .venv/
 
-# Fichiers de configuration sensible
-.env
-*.key
-*.pem
-credentials.json
-token.pickle
-
 # Cache Python
 __pycache__/
-*.py[cod]
+*.pyc
+*.pyo
 
 # Logs
-*.log
 logs/
+*.log
 
 # Base de données
 *.db
-*.sqlite3
+*.sqlite
 
-# Dossiers temporaires
-temp/
-tmp/
+# Système
+.DS_Store
+Thumbs.db
+EOF
