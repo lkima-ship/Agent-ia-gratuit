@@ -1,59 +1,53 @@
 cat > src/main.py << 'EOF'
 #!/usr/bin/env python3
 """
-Point d'entrée principal de l'Agent IA Gratuit
+Agent IA Gratuit - Point d'entrée principal
 """
-
-import sys
-import subprocess
 
 def main():
     print("🤖 Agent IA Gratuit")
-    print("==================")
+    print("===================")
     print("Options disponibles:")
-    print("1. Lancer le serveur web")
-    print("2. Tester l'API")
+    print("1. Démarrer le serveur web")
+    print("2. Afficher la structure")
     print("3. Quitter")
     
     try:
-        choice = input("\nChoisissez une option (1-3): ").strip()
+        choice = input("\nVotre choix (1-3): ")
         
         if choice == "1":
-            print("\n" + "="*40)
-            print("Lancement du serveur web...")
-            print("="*40)
-            # Importer et exécuter le serveur directement
-            from src.simple_server import run_server
-            run_server()
-            
-        elif choice == "2":
-            print("\nTest de l'API...")
-            import requests
+            print("\n🚀 Démarrage du serveur web...")
             try:
-                response = requests.get("http://localhost:8000", timeout=2)
-                print(f"✅ Serveur répond: {response.status_code}")
-                print(f"📦 Contenu: {response.json()}")
-            except Exception as e:
-                print(f"❌ Erreur: {e}")
-                print("Le serveur ne semble pas fonctionner.")
-                launch = input("Voulez-vous le lancer? (o/n): ")
-                if launch.lower() in ['o', 'oui', 'y', 'yes']:
-                    from src.simple_server import run_server
-                    run_server()
-                    
+                # Importer et exécuter le serveur
+                from src.simple_server import run_server
+                run_server()
+            except ImportError:
+                print("❌ Erreur: simple_server.py non trouvé")
+                print("Exécutez: python3 src/simple_server.py directement")
+                
+        elif choice == "2":
+            print("\n📁 Structure du projet:")
+            import os
+            for root, dirs, files in os.walk("."):
+                level = root.replace(".", "").count(os.sep)
+                indent = " " * 2 * level
+                print(f"{indent}{os.path.basename(root)}/")
+                subindent = " " * 2 * (level + 1)
+                for file in files:
+                    if file.endswith(".py"):
+                        print(f"{subindent}{file}")
+                        
         elif choice == "3":
             print("\nAu revoir! 👋")
-            sys.exit(0)
+            return
             
         else:
-            print("\nOption invalide. Veuillez choisir 1, 2 ou 3.")
+            print("\n⚠️ Choix invalide")
             
     except KeyboardInterrupt:
-        print("\n\nInterruption par l'utilisateur. Au revoir!")
-        sys.exit(0)
+        print("\n\nInterrompu par l'utilisateur")
     except Exception as e:
         print(f"\n❌ Erreur: {e}")
-        sys.exit(1)
 
 if __name__ == "__main__":
     main()
