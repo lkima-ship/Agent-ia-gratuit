@@ -1,85 +1,60 @@
 cat > src/main.py << 'EOF'
 #!/usr/bin/env python3
 """
-Agent IA Gratuit - Version française
-Assistant personnel pour emails, calendrier et notes vocales
+Point d'entrée principal de l'Agent IA Gratuit
 """
 
-import os
 import sys
-import time
+import subprocess
 
-print("🤖 AGENT IA GRATUIT - FRANÇAIS")
-print("=" * 50)
-
-# Ajouter le chemin
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-try:
-    from config.settings import config
-    from src.core.agent import PersonalAIAgent
-    from src.modules.email_processor import EmailProcessor
+def main():
+    print("🤖 Agent IA Gratuit")
+    print("==================")
+    print("Options disponibles:")
+    print("1. Lancer le serveur web")
+    print("2. Tester l'API")
+    print("3. Quitter")
     
-    print("✅ Configuration chargée")
-    print(f"   📧 Email: {config.EMAIL_ADDRESS[:3]}***" if config.EMAIL_ADDRESS else "   📧 Email: Non configuré")
-    print(f"   🗄️  Répertoire: {config.BASE_DIR}")
-    
-    # Initialiser l'agent
-    agent = PersonalAIAgent("Assistant Personnel")
-    print(f"\n🤖 {agent.greet()}")
-    
-    # Initialiser le module email
-    email_module = EmailProcessor()
-    print(f"📧 {email_module.check_emails()}")
-    
-    # Tester Outlook si configuré
-    if hasattr(config, 'EMAIL_ADDRESS') and config.EMAIL_ADDRESS:
-        print("\n🔍 Test de configuration Outlook...")
+    try:
+        choice = input("\nChoisissez une option (1-3): ").strip()
         
-        try:
-            from src.modules.outlook_client import OutlookClient
+        if choice == "1":
+            print("\n" + "="*40)
+            print("Lancement du serveur web...")
+            print("="*40)
+            # Importer et exécuter le serveur directement
+            from src.simple_server import run_server
+            run_server()
             
-            masked_email = config.EMAIL_ADDRESS[:3] + "***"
-            print(f"   Compte: {masked_email}")
+        elif choice == "2":
+            print("\nTest de l'API...")
+            import requests
+            try:
+                response = requests.get("http://localhost:8000", timeout=2)
+                print(f"✅ Serveur répond: {response.status_code}")
+                print(f"📦 Contenu: {response.json()}")
+            except Exception as e:
+                print(f"❌ Erreur: {e}")
+                print("Le serveur ne semble pas fonctionner.")
+                launch = input("Voulez-vous le lancer? (o/n): ")
+                if launch.lower() in ['o', 'oui', 'y', 'yes']:
+                    from src.simple_server import run_server
+                    run_server()
+                    
+        elif choice == "3":
+            print("\nAu revoir! 👋")
+            sys.exit(0)
             
-            print("   Test automatique en cours...")
+        else:
+            print("\nOption invalide. Veuillez choisir 1, 2 ou 3.")
             
-            client = OutlookClient(config.EMAIL_ADDRESS, config.EMAIL_PASSWORD)
-            
-            if client.connect():
-                count = client.get_unread_count()
-                print(f"   ✅ Connecté - Emails non lus: {count}")
-                client.disconnect()
-            else:
-                print("   ❌ Échec de connexion")
-                print("   Vérifiez vos identifiants dans .env")
-                
-        except ImportError:
-            print("   ℹ️  Module Outlook non disponible")
-        except Exception as e:
-            print(f"   ⚠️  Erreur: {e}")
-    
-    print("\n" + "=" * 50)
-    print("🎯 FONCTIONNALITÉS DISPONIBLES :")
-    print("   1. 📧 Surveillance emails (Outlook)")
-    print("   2. 🤖 Analyse IA basique")
-    print("   3. 📁 Gestion de la structure")
-    print("   4. 🔒 Protection des secrets")
-    
-    print("\n📝 PROCHAINES ÉTAPES :")
-    print("   1. Développer le module calendrier")
-    print("   2. Ajouter la transcription vocale")
-    print("   3. Créer une interface web")
-    print("   4. Automatiser les réponses")
-    
-    print("\n" + "=" * 50)
-    print("💡 ASTUCE :")
-    print("Vos secrets sont protégés dans .gitignore")
-    print("NE partagez jamais votre fichier .env !")
-    
-except ImportError as e:
-    print(f"❌ Erreur d'import: {e}")
-    print("Vérifiez que tous les modules sont installés")
-except Exception as e:
-    print(f"❌ Erreur générale: {e}")
+    except KeyboardInterrupt:
+        print("\n\nInterruption par l'utilisateur. Au revoir!")
+        sys.exit(0)
+    except Exception as e:
+        print(f"\n❌ Erreur: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
 EOF
