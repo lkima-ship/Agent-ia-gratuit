@@ -123,3 +123,119 @@ def main():
 if __name__ == '__main__':
     main()
 EOF
+# MODIFIEZ VOTRE FICHIER EXISTANT flask_doctor.py
+
+# Ajoutez ces imports au début du fichier
+from ia_agent import FlaskCodeGenerator
+from pathlib import Path
+import subprocess
+import sys
+import os
+
+# MODIFIEZ la fonction ai_code_generator() dans votre menu :
+def ai_code_generator():
+    """Générateur de code IA amélioré"""
+    print("\n=== AI Code Generator ===")
+    print("Générateur de code basé sur l'IA")
+    
+    # Initialiser le générateur
+    generator = FlaskCodeGenerator()
+    
+    # Demander la description
+    description = input("\nDescription du code à générer : ")
+    
+    # Demander le type d'application
+    print("\nTypes d'application disponibles :")
+    print("1. Simple (routes basiques)")
+    print("2. API REST")
+    print("3. Avec formulaires")
+    print("4. Avec base de données")
+    print("5. Avec authentification")
+    
+    choice = input("\nChoisissez le type (1-5) [1]: ") or "1"
+    
+    type_map = {
+        "1": "simple",
+        "2": "api",
+        "3": "form",
+        "4": "database",
+        "5": "auth"
+    }
+    
+    app_type = type_map.get(choice, "simple")
+    
+    # Demander le nom du projet
+    project_name = input("\nNom du projet [mon_app_flask]: ") or "mon_app_flask"
+    
+    print("\n⏳ Génération du code en cours...")
+    
+    # Générer le code
+    result = generator.generate_from_description(description, app_type)
+    
+    if result["success"]:
+        # Sauvegarder le code
+        filepath = generator.save_code(result["code"], project_name)
+        
+        # Créer un template HTML
+        generator.create_html_template(project_name)
+        
+        print("\n" + "="*60)
+        print("✅ CODE GÉNÉRÉ AVEC SUCCÈS !")
+        print("="*60)
+        
+        # Afficher un aperçu du code
+        print(f"\nFichier généré : {filepath}")
+        print(f"Type d'application : {result['template_used']}")
+        
+        # Afficher les premières lignes du code
+        print("\n--- Aperçu du code ---")
+        lines = result["code"].split('\n')[:15]
+        for line in lines:
+            print(line)
+        
+        print("\n--- Instructions ---")
+        print(f"1. Pour exécuter : python {filepath}")
+        print(f"2. Accédez à : http://localhost:5000")
+        print(f"3. Fichier HTML généré dans : templates/index.html")
+        
+        # Options supplémentaires
+        print("\nOptions :")
+        print("1. Exécuter l'application maintenant")
+        print("2. Voir le code complet")
+        print("3. Retour au menu")
+        
+        option = input("\nVotre choix (1-3) [3]: ") or "3"
+        
+        if option == "1":
+            run_flask_app(filepath)
+        elif option == "2":
+            print("\n" + "="*60)
+            print(result["code"])
+            print("="*60)
+    
+    else:
+        print("\n❌ Erreur lors de la génération du code")
+        print(result.get("error", "Erreur inconnue"))
+
+def run_flask_app(filepath):
+    """Exécute l'application Flask générée"""
+    print(f"\n🚀 Lancement de l'application...")
+    print(f"📂 Fichier : {filepath}")
+    print("\n📋 Informations :")
+    print("- Serveur accessible à : http://localhost:5000")
+    print("- Appuyez sur Ctrl+C pour arrêter")
+    print("- Vérifiez les logs Flask ci-dessous")
+    print("\n" + "="*60)
+    
+    try:
+        # Définir les variables d'environnement Flask
+        os.environ['FLASK_APP'] = str(filepath)
+        os.environ['FLASK_ENV'] = 'development'
+        
+        # Lancer Flask
+        subprocess.run([sys.executable, "-m", "flask", "run"], check=True)
+    except KeyboardInterrupt:
+        print("\n\n⏹️ Application arrêtée par l'utilisateur")
+    except Exception as e:
+        print(f"\n❌ Erreur lors du lancement : {e}")
+    
