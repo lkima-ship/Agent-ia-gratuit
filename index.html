@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Agent IA Gratuit</title>
+</head>
+<body>
+    <h1>🎯 Agent IA Gratuit</h1>
+    <p>Assistant intelligent pour automatiser vos tâches</p>
+    
+    <h2>📊 Tester l'API :</h2>
+    <div>
+        <input type="text" id="apiUrl" 
+               value="http://ton-serveur:8000" 
+               style="width: 300px">
+        <button onclick="testAPI()">Tester</button>
+    </div>
+    <pre id="result"></pre>
+    
+    <script>
+    async function testAPI() {
+        const url = document.getElementById('apiUrl').value;
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            document.getElementById('result').innerHTML = 
+                JSON.stringify(data, null, 2);
+        } catch (error) {
+            document.getElementById('result').innerHTML = 
+                'Erreur : ' + error.message;
+        }
+    }
+    </script>
+</body>
+</html>
