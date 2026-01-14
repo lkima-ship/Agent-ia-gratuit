@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h2>Test Agent IA API</h2>
+    <button onclick="testAPI()">Test Health</button>
+    <div id="result"></div>
+    
+    <script>
+    async function testAPI() {
+        const response = await fetch('http://localhost:8000/health');
+        const data = await response.json();
+        document.getElementById('result').innerHTML = 
+            JSON.stringify(data, null, 2);
+    }
+    </script>
+</body>
+</html>
