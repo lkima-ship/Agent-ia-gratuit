@@ -68,4 +68,47 @@ class IntelligentAgent:
     async def learn_from_interaction(self, feedback: Dict):
         """Apprentissage automatique des préférences"""
         self.memory.update(feedback)
+        # Dans app.py - Version améliorée
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import openai
+
+app = Flask(__name__)
+CORS(app)
+
+# Endpoints principaux
+@app.route('/api/v1/process', methods=['POST'])
+def process_endpoint():
+    data = request.json
+    agent_response = process_with_agent(data['query'])
+    return jsonify({
+        'success': True,
+        'response': agent_response,
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/api/v1/emails/analyze', methods=['POST'])
+def analyze_email():
+    """Analyse sémantique d'un email"""
+    email_text = request.json['email']
+    sentiment = analyze_sentiment(email_text)
+    urgency = detect_urgency(email_text)
+    
+    return jsonify({
+        'sentiment': sentiment,
+        'urgency_level': urgency,
+        'suggested_actions': generate_suggestions(email_text)
+    })
+
+@app.route('/api/v1/calendar/smart-schedule', methods=['POST'])
+def smart_schedule():
+    """Planification intelligente de rendez-vous"""
+    constraints = request.json['constraints']
+    optimal_time = find_optimal_time(constraints)
+    
+    return jsonify({
+        'suggested_time': optimal_time,
+        'conflicts': check_conflicts(optimal_time),
+        'duration_recommendation': suggest_duration(constraints)
+    })
         
