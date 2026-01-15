@@ -1,22 +1,25 @@
-# config.py
+# config.py - Configuration centralisée
 import os
-from pathlib import Path
+from dataclasses import dataclass
+from typing import Optional
 
-class Config:
-    # Chemins
-    BASE_DIR = Path(__file__).parent
-    GENERATED_CODE_DIR = BASE_DIR / "generated_code"
-    TEMPLATES_DIR = BASE_DIR / "templates"
+@dataclass
+class AgentConfig:
+    # Modèles IA
+    openai_api_key: Optional[str] = os.getenv("OPENAI_API_KEY")
+    huggingface_token: Optional[str] = os.getenv("HF_TOKEN")
     
-    # Options de génération
-    DEFAULT_COMPLEXITY = "simple"
-    SUPPORTED_COMPLEXITIES = ["simple", "medium", "complex"]
+    # Base de données
+    db_url: str = os.getenv("DB_URL", "sqlite:///agent.db")
     
-    # Modèles disponibles
-    CODE_TEMPLATES = {
-        "simple": "Application Flask basique avec 2-3 routes",
-        "api": "API REST avec endpoints CRUD",
-        "form": "Application avec formulaires",
-        "database": "Application avec base de données",
-        "auth": "Système d'authentification"
-    }
+    # Paramètres de performance
+    max_workers: int = 4
+    cache_ttl: int = 3600
+    
+    # Personnalisation
+    agent_personality: str = "helpful"  # helpful, professional, casual
+    language: str = "fr"
+    
+    @classmethod
+    def from_env(cls):
+        return cls()
