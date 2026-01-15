@@ -811,6 +811,44 @@ class AgentIAGratuit:
     
     def menu_parametres(self):
         """Menu des paramètres"""
+       # Après avoir importé les modules, ajouter :
+db = DatabaseManager()
+
+# Dans le menu, après l'affichage des choix, ajouter :
+while True:
+    print("\n=== Agent IA Gratuit ===")
+    print("1. Traiter un email")
+    print("2. Planifier un rendez-vous")
+    print("3. Transcrire une note vocale")
+    print("4. Afficher les statistiques")
+    print("5. Mode commande avancée")
+    print("6. Quitter")
+    
+    choix = input("Votre choix (1-6): ").strip()
+    
+    if choix == "1":
+        # Votre code existant pour traiter un email
+        pass
+    elif choix == "2":
+        # Votre code existant pour planifier un rdv
+        pass
+    elif choix == "3":
+        # Votre code existant pour les notes vocales
+        pass
+    elif choix == "4":
+        stats = db.get_stats()
+        print(f"Statistiques : {stats['emails']} emails, {stats['rendezvous']} rendez-vous, {stats['notes']} notes vocales")
+    elif choix == "5":
+        print("\n🔧 MODE COMMANDE AVANCÉE")
+        print("Tapez 'aide' pour les commandes disponibles")
+        while True:
+            cmd = input("\nagent> ").strip()
+            if cmd.lower() == "retour":
+                break
+            executer_commande(cmd, db)
+    elif choix == "6":
+        print("Au revoir!")
+        break
         while True:
             self.clear_screen()
             print(f"{self.COLORS['CYAN']}{'='*50}{self.COLORS['RESET']}")
