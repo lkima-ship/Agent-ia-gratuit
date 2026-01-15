@@ -1,3 +1,263 @@
+# Ajouter en début de fichier
+import sqlite3
+from datetime import datetime
+
+class DatabaseManager:
+    def __init__(self):
+        self.db_file = "agent_data.db"
+        self.init_database()
+    
+    def init_database(self):
+        """Initialiser la base de données"""
+        conn = sqlite3.connect(self.db_file)
+        c = conn.cursor()
+        
+        # Table emails
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS emails (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sujet TEXT NOT NULL,
+                expediteur TEXT NOT NULL,
+                contenu TEXT,
+                date TEXT NOT NULL,
+                traite INTEGER DEFAULT 0
+            )
+        ''')
+        
+        # Table rendez-vous
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS rendezvous (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                titre TEXT NOT NULL,
+                date TEXT NOT NULL,
+                heure TEXT NOT NULL,
+                lieu TEXT,
+                participant TEXT,
+                statut TEXT DEFAULT 'planifié'
+            )
+        ''')
+        
+        # Table statistiques
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS statistiques (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                type_action TEXT NOT NULL,
+                date_action TEXT NOT NULL,
+                details TEXT
+            )
+        ''')
+        
+        conn.commit()
+        conn.close()
+        print("✅ Base de données initialisée")
+    
+    def ajouter_email(self, sujet, expediteur, contenu=""):
+        """Ajouter un email à la base"""
+        conn = sqlite3.connect(self.db_file)
+        c = conn.cursor()
+        date = datetime.now().strftime("%Y-%m-%d %H:%M")
+        
+        c.execute(
+            "INSERT INTO emails (sujet, expediteur, contenu, date) VALUES (?, ?, ?, ?)",
+            (sujet, expediteur, contenu, date)
+        )
+        
+        # Enregistrer dans les statistiques
+        c.execute(
+            "INSERT INTO statistiques (type_action, date_action, details) VALUES (?, ?, ?)",
+            ("email_ajoute", date, f"Sujet: {sujet}")
+        )
+        
+        conn.commit()
+        conn.close()
+        return True
+    
+    def ajouter_rendezvous(self, titre, date, heure, lieu="", participant=""):
+        """Ajouter un rendez-vous"""
+        conn = sqlite3.connect(self.db_file)
+        c = conn.cursor()
+        
+        c.execute(
+            "INSERT INTO rendezvous (titre, date, heure, lieu, participant) VALUES (?, ?, ?, ?, ?)",
+            (titre, date, heure, lieu, participant)
+        )
+        
+        # Statistiques
+        date_action = datetime.now().strftime("%Y-%m-%d %H:%M")
+        c.execute(
+            "INSERT INTO statistiques (type_action, date_action, details) VALUES (?, ?, ?)",
+            ("rdv_ajoute", date_action, f"Titre: {titre}")
+        )
+        
+        conn.commit()
+        conn.close()
+        return True
+    
+    def get_stats(self):
+        """Obtenir les statistiques"""
+        conn = sqlite3.connect(self.db_file)
+        c = conn.cursor()
+        
+        # Compter les emails
+        c.execute("SELECT COUNT(*) FROM emails")
+        emails = c.fetchone()[0]
+        
+        # Compter les rendez-vous
+        c.execute("SELECT COUNT(*) FROM rendezvous")
+        rdv = c.fetchone()[0]
+        
+        # Compter les notes (si table existe)
+        try:
+            c.execute("SELECT COUNT(*) FROM notes_vocales")
+            notes = c.fetchone()[0]
+        except:
+            notes = 0
+        
+        conn.close()
+        
+        return {
+            "emails": emails,
+            "rendezvous": rdv,
+            "notes": notes
+        }
+    
+    def detail_rendezvous(self):
+        """Afficher les détails des rendez-vous"""
+        conn = sqlite3.connect(self.db_file)
+        c = conn.cursor()
+        
+        c.execute("SELECT * FROM rendezvous ORDER BY date, heure")
+        rdvs = c.fetchall()
+        
+        if not rdvs:
+            print("Aucun rendez-vous trouvé.")
+            conn.close()
+            return
+        
+        print("\n" + "="*60)
+        print("📅 DÉTAILS DES RENDEZ-VOUS")
+        print("="*60)
+        
+        for rdv in rdvs:
+            id_rdv, titre, date, heure, lieu, participant, statut = rdv
+            print(f"\n🔹 RENDEZ-VOUS #{id_rdv}")
+            print(f"   Titre: {titre}")
+            print(f"   Date: {date}")
+            print(f"   Heure: {heure}")
+            print(f"   Lieu: {lieu}")
+            print(f"   Participant: {participant}")
+            print(f"   Statut: {statut}")
+        
+        print("="*60)
+        conn.close()
+    
+    def rechercher_emails(self, mot_cle):
+        """Rechercher des emails par mot-clé"""
+        conn = sqlite3.connect(self.db_file)
+        c = conn.cursor()
+        
+        c.execute(
+            "SELECT * FROM emails WHERE sujet LIKE ? OR expediteur LIKE ? OR contenu LIKE ?",
+            (f'%{mot_cle}%', f'%{mot_cle}%', f'%{mot_cle}%')
+        )
+        
+        resultats = c.fetchall()
+        
+        if not resultats:
+            print(f"Aucun email trouvé avec le mot-clé '{mot_cle}'")
+            conn.close()
+            return
+        
+        print(f"\n🔍 RÉSULTATS DE RECHERCHE : '{mot_cle}'")
+        print("="*60)
+        
+        for email in resultats:
+            id_email, sujet, expediteur, contenu, date, traite = email
+            statut = "✅ Traité" if traite else "📧 Non traité"
+            print(f"\nID: {id_email} | {statut}")
+            print(f"Expéditeur: {expediteur}")
+            print(f"Sujet: {sujet}")
+            print(f"Date: {date}")
+            if contenu:
+                preview = contenu[:100] + "..." if len(contenu) > 100 else contenu
+                print(f"Contenu: {preview}")
+        
+        print("="*60)
+        conn.close()
+
+# Ajouter cette fonction pour étendre les commandes
+def executer_commande(commande, db):
+    """Exécuter une commande avancée"""
+    commande = commande.lower().strip()
+    
+    if commande == "detail rdv" or commande == "details rdv":
+        db.detail_rendezvous()
+    
+    elif commande.startswith("rechercher "):
+        mot_cle = commande.split(" ", 1)[1]
+        db.rechercher_emails(mot_cle)
+    
+    elif commande == "aide" or commande == "help":
+        print("\n📚 COMMANDES DISPONIBLES :")
+        print("  detail rdv        - Afficher les détails des rendez-vous")
+        print("  rechercher [mot]  - Rechercher dans les emails")
+        print("  stats détaillées  - Statistiques avancées")
+        print("  ajouter email     - Ajouter un nouvel email")
+        print("  ajouter rdv       - Ajouter un nouveau rendez-vous")
+        print("  aide              - Afficher cette aide")
+        print("  quit              - Quitter")
+    
+    elif commande == "stats détaillées":
+        stats = db.get_stats()
+        print("\n📊 STATISTIQUES DÉTAILLÉES :")
+        print(f"  📧 Emails totaux: {stats['emails']}")
+        print(f"  📅 Rendez-vous: {stats['rendezvous']}")
+        print(f"  🎤 Notes vocales: {stats['notes']}")
+        
+        # Calculer les tendances
+        conn = sqlite3.connect(db.db_file)
+        c = conn.cursor()
+        
+        # Emails des derniers jours
+        c.execute("SELECT COUNT(*) FROM emails WHERE date >= datetime('now', '-7 days')")
+        emails_7j = c.fetchone()[0]
+        print(f"  📈 Emails (7j): {emails_7j}")
+        
+        # RDV à venir
+        aujourdhui = datetime.now().strftime("%Y-%m-%d")
+        c.execute("SELECT COUNT(*) FROM rendezvous WHERE date >= ?", (aujourdhui,))
+        rdv_futurs = c.fetchone()[0]
+        print(f"  🗓️  RDV à venir: {rdv_futurs}")
+        
+        conn.close()
+    
+    elif commande == "ajouter email":
+        print("\n📝 AJOUTER UN EMAIL :")
+        sujet = input("Sujet: ")
+        expediteur = input("Expéditeur: ")
+        contenu = input("Contenu (optionnel): ")
+        
+        if db.ajouter_email(sujet, expediteur, contenu):
+            print("✅ Email ajouté avec succès!")
+    
+    elif commande == "ajouter rdv":
+        print("\n📅 AJOUTER UN RENDEZ-VOUS :")
+        titre = input("Titre: ")
+        date = input("Date (AAAA-MM-JJ): ")
+        heure = input("Heure (HH:MM): ")
+        lieu = input("Lieu (optionnel): ")
+        participant = input("Participant (optionnel): ")
+        
+        if db.ajouter_rendezvous(titre, date, heure, lieu, participant):
+            print("✅ Rendez-vous ajouté avec succès!")
+    
+    elif commande == "quit" or commande == "exit":
+        print("👋 Au revoir!")
+        exit(0)
+    
+    else:
+        print(f"❌ Commande non reconnue: {commande}")
+        print("Tapez 'aide' pour voir les commandes disponibles.")
 #!/usr/bin/env python3
 # agent_ia_complet.py - Agent IA avec toutes les fonctionnalités
 
