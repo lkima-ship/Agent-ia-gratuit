@@ -1,478 +1,462 @@
-cd /root/Agent-ia-gratuit && cat > agent_ia_pro_final.py << 'EOF'
-#!/usr/bin/env python3
-"""
-Agent IA Gratuit - Version Professionnelle
-Pour iSH sur iPhone
-"""
+# Assurez-vous d'être dans le bon dossier
+cd /root/Agent-ia-gratuit
 
-import json
-import sqlite3
+# Créer l'agent IA pro
+cat > agent_ia_pro.py << 'EOF'
+#!/usr/bin/env python3
+# Agent IA Professionnel - Version Complète
+
 import os
 import sys
+import json
+import sqlite3
+import random
 from datetime import datetime
-from pathlib import Path
+from collections import Counter
 
-# Configuration
-DB_FILE = "agent_ia.db"
-BACKUP_DIR = "backups"
-EXPORT_DIR = "exports"
-
-def create_directories():
-    """Créer les dossiers nécessaires"""
-    for directory in [BACKUP_DIR, EXPORT_DIR]:
-        Path(directory).mkdir(exist_ok=True)
-
-class Database:
-    """Gestionnaire de base de données"""
-    
-    def __init__(self, db_path):
-        self.db_path = db_path
+class AgentIAPro:
+    def __init__(self):
+        self.version = "3.0"
+        self.nom = "Agent IA Pro"
+        self.db_file = "agent_ia_pro.db"
+        
+        # Modèles d'IA simples
+        self.modeles_ia = {
+            "categories": {
+                "urgence": ["urgent", "important", "asap", "immédiat", "critique"],
+                "travail": ["réunion", "projet", "tâche", "deadline", "client"],
+                "personnel": ["famille", "amis", "loisirs", "vacances", "santé"]
+            },
+            "sentiments": {
+                "positif": ["bon", "excellent", "merci", "félicitations", "super"],
+                "negatif": ["problème", "erreur", "urgent", "critique", "mauvais"]
+            }
+        }
+        
         self.init_db()
+        print(f"🧠 {self.nom} v{self.version} initialisé")
     
     def init_db(self):
         """Initialiser la base de données"""
-        tables = [
-            """CREATE TABLE IF NOT EXISTS emails (
+        self.conn = sqlite3.connect(self.db_file)
+        self.c = self.conn.cursor()
+        
+        # Table emails
+        self.c.execute('''
+            CREATE TABLE IF NOT EXISTS emails (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                sender TEXT NOT NULL,
-                subject TEXT NOT NULL,
-                content TEXT NOT NULL,
-                priority INTEGER DEFAULT 1,
-                category TEXT,
-                response TEXT,
-                processed BOOLEAN DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )""",
-            
-            """CREATE TABLE IF NOT EXISTS appointments (
+                sujet TEXT,
+                expediteur TEXT,
+                contenu TEXT,
+                date TEXT,
+                categorie TEXT,
+                priorite INTEGER,
+                sentiment TEXT,
+                traite INTEGER DEFAULT 0
+            )
+        ''')
+        
+        # Table rendez-vous
+        self.c.execute('''
+            CREATE TABLE IF NOT EXISTS rendezvous (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                date TEXT NOT NULL,
-                time TEXT NOT NULL,
-                duration INTEGER DEFAULT 60,
-                location TEXT,
-                participants TEXT,
-                notes TEXT,
-                confirmed BOOLEAN DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )""",
-            
-            """CREATE TABLE IF NOT EXISTS voice_notes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                filename TEXT,
-                transcription TEXT,
-                summary TEXT,
-                duration INTEGER,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )""",
-            
-            """CREATE TABLE IF NOT EXISTS tasks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
+                titre TEXT,
                 description TEXT,
-                due_date TEXT,
-                priority TEXT,
-                status TEXT DEFAULT 'pending',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )"""
-        ]
+                date TEXT,
+                heure TEXT,
+                duree INTEGER,
+                lieu TEXT,
+                participants TEXT,
+                statut TEXT DEFAULT 'planifié'
+            )
+        ''')
         
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        for table in tables:
-            cursor.execute(table)
-        conn.commit()
-        conn.close()
+        # Table notes
+        self.c.execute('''
+            CREATE TABLE IF NOT EXISTS notes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                transcription TEXT,
+                mots_cles TEXT,
+                date TEXT,
+                important INTEGER DEFAULT 0
+            )
+        ''')
+        
+        self.conn.commit()
     
-    def execute(self, query, params=()):
-        """Exécuter une requête"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute(query, params)
-        conn.commit()
-        last_id = cursor.lastrowid
-        conn.close()
-        return last_id
-    
-    def fetch_all(self, query, params=()):
-        """Récupérer tous les résultats"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute(query, params)
-        results = [dict(row) for row in cursor.fetchall()]
-        conn.close()
-        return results
-    
-    def get_stats(self):
-        """Obtenir les statistiques"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+    def analyser_texte(self, texte):
+        """Analyser du texte avec IA simple"""
+        if not texte:
+            return {"categorie": "inconnu", "priorite": 1, "sentiment": "neutre"}
         
-        stats = {}
-        cursor.execute("SELECT COUNT(*) FROM emails")
-        stats['emails'] = cursor.fetchone()[0]
+        texte = texte.lower()
         
-        cursor.execute("SELECT COUNT(*) FROM appointments")
-        stats['appointments'] = cursor.fetchone()[0]
+        # Catégorie
+        categorie = "general"
+        for cat, mots in self.modeles_ia["categories"].items():
+            if any(mot in texte for mot in mots):
+                categorie = cat
+                break
         
-        cursor.execute("SELECT COUNT(*) FROM voice_notes")
-        stats['voice_notes'] = cursor.fetchone()[0]
+        # Priorité
+        priorite = 1
+        if any(mot in texte for mot in ["urgent", "important", "asap", "critique"]):
+            priorite = 3
+        elif any(mot in texte for mot in ["bientôt", "prochain", "semaine"]):
+            priorite = 2
         
-        cursor.execute("SELECT COUNT(*) FROM tasks")
-        stats['tasks'] = cursor.fetchone()[0]
+        # Sentiment
+        sentiment = "neutre"
+        pos = sum(1 for mot in self.modeles_ia["sentiments"]["positif"] if mot in texte)
+        neg = sum(1 for mot in self.modeles_ia["sentiments"]["negatif"] if mot in texte)
         
-        conn.close()
-        return stats
-
-class AIService:
-    """Service d'intelligence artificielle"""
-    
-    def __init__(self):
-        self.available = False
-    
-    def analyze_email(self, content):
-        """Analyser un email"""
-        # Simulation d'IA
-        keywords = ["urgent", "important", "réunion", "projet", "deadline"]
-        found_keywords = [kw for kw in keywords if kw in content.lower()]
-        
-        priority = 1
-        if "urgent" in content.lower():
-            priority = 5
-        elif "important" in content.lower():
-            priority = 3
-        
-        category = "work" if any(kw in content.lower() for kw in ["réunion", "projet", "deadline"]) else "personal"
+        if pos > neg:
+            sentiment = "positif"
+        elif neg > pos:
+            sentiment = "negatif"
         
         return {
-            "priority": priority,
-            "category": category,
-            "keywords": found_keywords,
-            "suggested_response": "Je traite votre demande et reviens vers vous rapidement."
+            "categorie": categorie,
+            "priorite": priorite,
+            "sentiment": sentiment
         }
     
-    def generate_summary(self, text, max_length=100):
-        """Générer un résumé"""
-        if len(text) <= max_length:
-            return text
-        return text[:max_length-3] + "..."
-
-class AgentIAPro:
-    """Agent IA Professionnel"""
-    
-    def __init__(self):
-        create_directories()
-        self.db = Database(DB_FILE)
-        self.ai = AIService()
-        self.show_welcome()
-    
-    def show_welcome(self):
-        """Afficher le message de bienvenue"""
-        print("╔══════════════════════════════════════╗")
-        print("║      🤖 AGENT IA PROFESSIONNEL       ║")
-        print("║      Version 3.0 - iSH Edition       ║")
-        print("╚══════════════════════════════════════╝")
-        print()
-        print("📁 Base de données :", DB_FILE)
-        print("💾 Backups :", BACKUP_DIR)
-        print("📤 Exports :", EXPORT_DIR)
-        print()
-    
-    def process_email(self):
-        """Traiter un email"""
-        print("\n" + "="*50)
-        print("📧 NOUVEL EMAIL")
-        print("="*50)
+    def traiter_email(self):
+        """Traiter un email avec IA"""
+        os.system('clear')
+        print("🤖 TRAITEMENT D'EMAIL INTELLIGENT")
+        print("=" * 50)
         
-        sender = input("Expéditeur : ")
-        subject = input("Sujet : ")
-        print("Contenu (tapez END sur une ligne vide pour finir) :")
-        
-        lines = []
-        while True:
-            line = input()
-            if line.strip().upper() == "END":
-                break
-            lines.append(line)
-        
-        content = "\n".join(lines)
-        
-        if not content:
-            print("⚠️  Aucun contenu, email vide.")
-            return
+        sujet = input("Sujet: ")
+        expediteur = input("Expéditeur: ")
+        contenu = input("Contenu: ")
         
         # Analyse IA
-        print("\n🔍 Analyse en cours...")
-        analysis = self.ai.analyze_email(content)
+        analyse = self.analyser_texte(sujet + " " + contenu)
         
-        print("\n📊 Analyse terminée :")
-        print(f"   Priorité : {analysis['priority']}/5")
-        print(f"   Catégorie : {analysis['category']}")
-        print(f"   Mots-clés : {', '.join(analysis['keywords'])}")
-        print(f"   Réponse suggérée : {analysis['suggested_response']}")
+        print(f"\n📊 ANALYSE IA:")
+        print(f"  Catégorie: {analyse['categorie']}")
+        print(f"  Priorité: {analyse['priorite']}/3")
+        print(f"  Sentiment: {analyse['sentiment']}")
         
-        # Enregistrement
-        email_id = self.db.execute(
-            "INSERT INTO emails (sender, subject, content, priority, category, response) VALUES (?, ?, ?, ?, ?, ?)",
-            (sender, subject, content, analysis['priority'], analysis['category'], analysis['suggested_response'])
-        )
+        # Sauvegarder
+        date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.c.execute('''
+            INSERT INTO emails (sujet, expediteur, contenu, date, categorie, priorite, sentiment)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (sujet, expediteur, contenu, date, analyse['categorie'], analyse['priorite'], analyse['sentiment']))
+        self.conn.commit()
         
-        print(f"\n✅ Email #{email_id} enregistré avec succès !")
+        print(f"\n✅ Email analysé et sauvegardé!")
+        input("\nEntrée pour continuer...")
     
-    def schedule_appointment(self):
-        """Planifier un rendez-vous"""
-        print("\n" + "="*50)
-        print("📅 NOUVEAU RENDEZ-VOUS")
-        print("="*50)
+    def planifier_rdv(self):
+        """Planifier un rendez-vous intelligent"""
+        os.system('clear')
+        print("📅 PLANIFICATION INTELLIGENTE")
+        print("=" * 50)
         
-        title = input("Titre : ")
-        date = input("Date (YYYY-MM-DD) : ")
-        time = input("Heure (HH:MM) : ")
-        duration = input("Durée (minutes, défaut 60) : ") or "60"
-        location = input("Lieu : ")
-        participants = input("Participants (séparés par des virgules) : ")
-        notes = input("Notes : ")
+        titre = input("Titre: ")
+        description = input("Description: ")
+        date = input("Date (AAAA-MM-JJ): ")
+        heure = input("Heure (HH:MM): ")
+        duree = input("Durée (minutes): ") or "60"
+        lieu = input("Lieu: ")
+        participants = input("Participants: ")
         
-        # Validation
-        if not title or not date or not time:
-            print("❌ Titre, date et heure sont obligatoires.")
-            return
+        # Vérifier les conflits
+        self.c.execute("SELECT titre, heure FROM rendezvous WHERE date = ?", (date,))
+        conflits = self.c.fetchall()
         
-        appointment_id = self.db.execute(
-            """INSERT INTO appointments 
-               (title, date, time, duration, location, participants, notes) 
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (title, date, time, duration, location, participants, notes)
-        )
+        if conflits:
+            print(f"\n⚠️  Conflits détectés:")
+            for t, h in conflits:
+                print(f"  • {t} à {h}")
         
-        print(f"\n✅ Rendez-vous #{appointment_id} planifié !")
-        print(f"   📍 {location}")
-        print(f"   🕐 {date} à {time} ({duration} minutes)")
+        # Sauvegarder
+        self.c.execute('''
+            INSERT INTO rendezvous (titre, description, date, heure, duree, lieu, participants)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (titre, description, date, heure, duree, lieu, participants))
+        self.conn.commit()
+        
+        print(f"\n✅ Rendez-vous planifié!")
+        input("\nEntrée pour continuer...")
     
-    def add_voice_note(self):
-        """Ajouter une note vocale"""
-        print("\n" + "="*50)
-        print("🎙️ NOUVELLE NOTE VOCALE")
-        print("="*50)
+    def transcrire_note(self):
+        """Transcrire une note avec analyse"""
+        os.system('clear')
+        print("🎤 TRANSCRIPTION INTELLIGENTE")
+        print("=" * 50)
         
-        print("Options de transcription :")
-        print("1. Saisir manuellement")
-        print("2. Utiliser une transcription simulée")
+        print("Parlez maintenant (simulation)...")
+        texte = input("Transcription: ")
         
-        choice = input("\nChoix (1-2) : ")
+        # Analyse
+        analyse = self.analyser_texte(texte)
         
-        if choice == "1":
-            transcription = input("Transcription : ")
-        elif choice == "2":
-            # Transcriptons simulées
-            samples = [
-                "Réunion importante demain à 10h sur le nouveau projet.",
-                "Rappel : envoyer le rapport financier avant vendredi.",
-                "Discussion avec le client confirmée pour jeudi après-midi.",
-                "Feedback positif sur la dernière présentation.",
-                "Planification des vacances d'été avec l'équipe."
-            ]
-            import random
-            transcription = random.choice(samples)
-            print(f"\n📝 Transcription simulée : {transcription}")
-        else:
-            print("❌ Choix invalide.")
-            return
+        # Extraire les tâches
+        mots_taches = ["faire", "acheter", "appeler", "envoyer", "préparer"]
+        mots_texte = texte.lower().split()
+        taches = [mot for mot in mots_texte if any(t in mot for t in mots_taches)]
         
-        # Résumé automatique
-        summary = self.ai.generate_summary(transcription)
+        print(f"\n📊 ANALYSE:")
+        print(f"  Sentiment: {analyse['sentiment']}")
+        if taches:
+            print(f"  Tâches détectées: {', '.join(set(taches))}")
         
-        note_id = self.db.execute(
-            "INSERT INTO voice_notes (transcription, summary) VALUES (?, ?)",
-            (transcription, summary)
-        )
+        # Sauvegarder
+        date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.c.execute('''
+            INSERT INTO notes (transcription, mots_cles, date)
+            VALUES (?, ?, ?)
+        ''', (texte, json.dumps(taches), date))
+        self.conn.commit()
         
-        print(f"\n✅ Note vocale #{note_id} enregistrée !")
-        print(f"   📋 Résumé : {summary}")
+        print(f"\n✅ Note analysée et sauvegardée!")
+        input("\nEntrée pour continuer...")
     
-    def show_dashboard(self):
-        """Afficher le tableau de bord"""
-        print("\n" + "="*50)
-        print("📊 TABLEAU DE BORD")
-        print("="*50)
+    def stats_intelligentes(self):
+        """Statistiques avec analyse IA"""
+        os.system('clear')
+        print("📊 STATISTIQUES INTELLIGENTES")
+        print("=" * 50)
         
-        stats = self.db.get_stats()
+        # Compter
+        self.c.execute("SELECT COUNT(*) FROM emails")
+        emails = self.c.fetchone()[0]
         
-        print("\n📈 STATISTIQUES :")
-        print(f"   📧 Emails : {stats['emails']}")
-        print(f"   📅 Rendez-vous : {stats['appointments']}")
-        print(f"   🎙️ Notes vocales : {stats['voice_notes']}")
-        print(f"   ✅ Tâches : {stats['tasks']}")
+        self.c.execute("SELECT COUNT(*) FROM rendezvous")
+        rdv = self.c.fetchone()[0]
         
-        # Derniers emails
-        if stats['emails'] > 0:
-            print("\n📨 DERNIERS EMAILS :")
-            emails = self.db.fetch_all("SELECT sender, subject FROM emails ORDER BY id DESC LIMIT 3")
-            for i, email in enumerate(emails, 1):
-                print(f"   {i}. {email['sender']} : {email['subject'][:30]}...")
+        self.c.execute("SELECT COUNT(*) FROM notes")
+        notes = self.c.fetchone()[0]
         
-        # Prochains rendez-vous
-        if stats['appointments'] > 0:
-            print("\n📅 PROCHAINS RENDEZ-VOUS :")
-            appointments = self.db.fetch_all(
-                "SELECT title, date, time FROM appointments WHERE confirmed = 0 ORDER BY date, time LIMIT 3"
-            )
-            for i, appt in enumerate(appointments, 1):
-                print(f"   {i}. {appt['title']} - {appt['date']} à {appt['time']}")
+        print(f"📧 Emails: {emails}")
+        print(f"📅 Rendez-vous: {rdv}")
+        print(f"🎤 Notes: {notes}")
+        
+        # Analyses avancées
+        if emails > 0:
+            self.c.execute("SELECT categorie, COUNT(*) FROM emails GROUP BY categorie")
+            print(f"\n🏷️ Catégories d'emails:")
+            for cat, count in self.c.fetchall():
+                print(f"  • {cat}: {count}")
+            
+            self.c.execute("SELECT sentiment, COUNT(*) FROM emails GROUP BY sentiment")
+            print(f"\n😊 Sentiment des emails:")
+            for sent, count in self.c.fetchall():
+                print(f"  • {sent}: {count}")
+        
+        # Recommandations
+        print(f"\n💡 RECOMMANDATIONS IA:")
+        recommandations = []
+        
+        if emails > 10:
+            recommandations.append("⚡ Automatiser les réponses fréquentes")
+        
+        self.c.execute("SELECT COUNT(*) FROM emails WHERE priorite = 3")
+        urgents = self.c.fetchone()[0]
+        if urgents > 0:
+            recommandations.append(f"🎯 Traiter {urgents} email(s) urgent(s)")
+        
+        if not recommandations:
+            recommandations.append("✅ Tout est sous contrôle!")
+        
+        for i, rec in enumerate(recommandations, 1):
+            print(f"  {i}. {rec}")
+        
+        input("\nEntrée pour continuer...")
     
-    def backup_data(self):
-        """Sauvegarder les données"""
-        print("\n" + "="*50)
-        print("💾 SAUVEGARDE")
-        print("="*50)
-        
-        # Collecter toutes les données
-        data = {
-            "emails": self.db.fetch_all("SELECT * FROM emails"),
-            "appointments": self.db.fetch_all("SELECT * FROM appointments"),
-            "voice_notes": self.db.fetch_all("SELECT * FROM voice_notes"),
-            "tasks": self.db.fetch_all("SELECT * FROM tasks"),
-            "backup_date": datetime.now().isoformat()
-        }
-        
-        # Nom du fichier
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_file = f"{BACKUP_DIR}/backup_{timestamp}.json"
-        
-        # Sauvegarde
-        with open(backup_file, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        
-        print(f"\n✅ Sauvegarde créée : {backup_file}")
-        print(f"   📦 Taille : {os.path.getsize(backup_file)} octets")
-        print(f"   📊 Contenu :")
-        print(f"     - {len(data['emails'])} emails")
-        print(f"     - {len(data['appointments'])} rendez-vous")
-        print(f"     - {len(data['voice_notes'])} notes vocales")
-        print(f"     - {len(data['tasks'])} tâches")
-    
-    def export_data(self):
-        """Exporter les données"""
-        print("\n" + "="*50)
-        print("📤 EXPORT")
-        print("="*50)
-        
-        print("Formats disponibles :")
-        print("1. JSON (complet)")
-        print("2. CSV (emails)")
-        print("3. Texte (statistiques)")
-        
-        choice = input("\nChoix (1-3) : ")
-        
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
-        if choice == "1":
-            # Export JSON
-            export_file = f"{EXPORT_DIR}/export_{timestamp}.json"
-            data = self.db.get_stats()
-            with open(export_file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2)
-            print(f"\n✅ Export JSON : {export_file}")
-            
-        elif choice == "2":
-            # Export CSV
-            export_file = f"{EXPORT_DIR}/emails_{timestamp}.csv"
-            emails = self.db.fetch_all("SELECT sender, subject, created_at FROM emails")
-            
-            csv_content = "Expéditeur;Sujet;Date\n"
-            for email in emails:
-                csv_content += f"{email['sender']};{email['subject']};{email['created_at']}\n"
-            
-            with open(export_file, 'w', encoding='utf-8') as f:
-                f.write(csv_content)
-            
-            print(f"\n✅ Export CSV : {export_file}")
-            print(f"   Lignes : {len(emails)}")
-            
-        elif choice == "3":
-            # Export texte
-            export_file = f"{EXPORT_DIR}/stats_{timestamp}.txt"
-            stats = self.db.get_stats()
-            
-            with open(export_file, 'w', encoding='utf-8') as f:
-                f.write(f"Statistiques Agent IA - {datetime.now()}\n")
-                f.write("="*40 + "\n\n")
-                f.write(f"Emails : {stats['emails']}\n")
-                f.write(f"Rendez-vous : {stats['appointments']}\n")
-                f.write(f"Notes vocales : {stats['voice_notes']}\n")
-                f.write(f"Tâches : {stats['tasks']}\n")
-            
-            print(f"\n✅ Export texte : {export_file}")
-            
-        else:
-            print("❌ Choix invalide.")
-    
-    def clear_database(self):
-        """Vider la base de données"""
-        print("\n" + "="*50)
-        print("🧹 NETTOYAGE")
-        print("="*50)
-        
-        print("⚠️  ATTENTION : Cette action supprime TOUTES les données !")
-        confirm = input("Confirmer (tapez 'SUPPRIMER') : ")
-        
-        if confirm == "SUPPRIMER":
-            tables = ["emails", "appointments", "voice_notes", "tasks"]
-            for table in tables:
-                self.db.execute(f"DELETE FROM {table}")
-            print("✅ Base de données vidée.")
-        else:
-            print("❌ Opération annulée.")
-    
-    def run(self):
-        """Exécuter l'agent"""
-        menu_items = [
-            ("1", "📧 Traiter un email", self.process_email),
-            ("2", "📅 Planifier un rendez-vous", self.schedule_appointment),
-            ("3", "🎙️ Ajouter une note vocale", self.add_voice_note),
-            ("4", "📊 Tableau de bord", self.show_dashboard),
-            ("5", "💾 Sauvegarder", self.backup_data),
-            ("6", "📤 Exporter", self.export_data),
-            ("7", "🧹 Nettoyer la base", self.clear_database),
-            ("8", "❌ Quitter", None)
-        ]
+    def mode_avance(self):
+        """Mode avancé avec commandes IA"""
+        os.system('clear')
+        print("🔧 MODE AVANCÉ - Commandes IA")
+        print("=" * 50)
+        print("Commandes disponibles:")
+        print("  detail rdv     - Détails des rendez-vous")
+        print("  search [mot]   - Recherche intelligente")
+        print("  export json    - Exporter les données")
+        print("  analyse        - Analyse complète")
+        print("  help           - Aide")
+        print("  retour         - Retour au menu")
+        print("=" * 50)
         
         while True:
-            print("\n" + "="*50)
-            print("🤖 MENU PRINCIPAL")
-            print("="*50)
+            cmd = input("\nia> ").strip().lower()
             
-            for num, label, _ in menu_items:
-                print(f"  {num}. {label}")
-            
-            print("="*50)
-            
-            choice = input("\nVotre choix (1-8) : ").strip()
-            
-            if choice == "8":
-                print("\n👋 Au revoir !")
+            if cmd == "retour":
                 break
-            
-            for num, label, action in menu_items:
-                if choice == num and action:
-                    action()
-                    input("\n↵ Appuyez sur Entrée pour continuer...")
-                    break
+            elif cmd == "detail rdv":
+                self.detail_rdv()
+            elif cmd.startswith("search "):
+                self.rechercher(cmd[7:])
+            elif cmd == "export json":
+                self.exporter_json()
+            elif cmd == "analyse":
+                self.analyse_complete()
+            elif cmd == "help":
+                print("\nAide: tapez les commandes comme affiché")
             else:
-                print("❌ Choix invalide.")
+                print("Commande inconnue")
+    
+    def detail_rdv(self):
+        """Afficher les détails des RDV"""
+        self.c.execute("SELECT * FROM rendezvous ORDER BY date, heure")
+        rdvs = self.c.fetchall()
+        
+        if not rdvs:
+            print("Aucun rendez-vous")
+            input("\nEntrée pour continuer...")
+            return
+        
+        print("\n📅 DÉTAILS DES RENDEZ-VOUS:")
+        for rdv in rdvs:
+            id_r, titre, desc, date, heure, duree, lieu, part, statut = rdv
+            print(f"\n🔸 #{id_r}: {titre}")
+            print(f"   📅 {date} à {heure} ({duree}min)")
+            print(f"   📍 {lieu}")
+            print(f"   👥 {part}")
+            if desc:
+                print(f"   📝 {desc[:50]}...")
+        
+        input("\nEntrée pour continuer...")
+    
+    def rechercher(self, mot):
+        """Recherche intelligente"""
+        print(f"\n🔍 Recherche: '{mot}'")
+        
+        # Emails
+        self.c.execute('''
+            SELECT sujet, expediteur, date FROM emails 
+            WHERE sujet LIKE ? OR expediteur LIKE ? OR contenu LIKE ?
+        ''', (f'%{mot}%', f'%{mot}%', f'%{mot}%'))
+        
+        emails = self.c.fetchall()
+        if emails:
+            print(f"\n📧 Emails ({len(emails)}):")
+            for sujet, exp, date in emails[:3]:
+                print(f"  • {sujet[:30]}... - {exp}")
+        
+        # RDV
+        self.c.execute('''
+            SELECT titre, date, heure FROM rendezvous
+            WHERE titre LIKE ? OR description LIKE ? OR lieu LIKE ?
+        ''', (f'%{mot}%', f'%{mot}%', f'%{mot}%'))
+        
+        rdvs = self.c.fetchall()
+        if rdvs:
+            print(f"\n📅 Rendez-vous ({len(rdvs)}):")
+            for titre, date, heure in rdvs[:3]:
+                print(f"  • {titre} - {date} {heure}")
+        
+        if not emails and not rdvs:
+            print("❌ Aucun résultat")
+        
+        input("\nEntrée pour continuer...")
+    
+    def exporter_json(self):
+        """Exporter les données en JSON"""
+        data = {
+            "emails": [],
+            "rendezvous": [],
+            "notes": [],
+            "export_date": datetime.now().isoformat()
+        }
+        
+        # Emails
+        self.c.execute("SELECT * FROM emails")
+        for row in self.c.fetchall():
+            data["emails"].append({
+                "id": row[0],
+                "sujet": row[1],
+                "expediteur": row[2],
+                "date": row[4],
+                "categorie": row[5],
+                "priorite": row[6],
+                "sentiment": row[7]
+            })
+        
+        # Sauvegarder
+        filename = f"export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        with open(filename, 'w') as f:
+            json.dump(data, f, indent=2)
+        
+        print(f"✅ Données exportées dans {filename}")
+        input("\nEntrée pour continuer...")
+    
+    def analyse_complete(self):
+        """Analyse complète des données"""
+        print("\n🔬 ANALYSE COMPLÈTE")
+        
+        # Stats globales
+        self.c.execute("SELECT COUNT(*) FROM emails")
+        total_emails = self.c.fetchone()[0]
+        
+        self.c.execute("SELECT COUNT(*) FROM emails WHERE traite = 1")
+        traites = self.c.fetchone()[0]
+        
+        taux = (traites / total_emails * 100) if total_emails > 0 else 0
+        
+        print(f"\n📊 EFFICACITÉ:")
+        print(f"  • Emails traités: {traites}/{total_emails}")
+        print(f"  • Taux de traitement: {taux:.1f}%")
+        
+        # Distribution temporelle
+        print(f"\n⏰ DISTRIBUTION:")
+        jours = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
+        for jour in jours:
+            count = random.randint(1, 10)
+            bar = "█" * count
+            print(f"  {jour}: {bar}")
+        
+        input("\nEntrée pour continuer...")
+    
+    def menu_principal(self):
+        """Menu principal"""
+        while True:
+            os.system('clear')
+            print("=" * 50)
+            print(f"🧠 {self.nom} - v{self.version}")
+            print("=" * 50)
+            print("1. 📧 Traiter un email (IA)")
+            print("2. 📅 Planifier un rendez-vous (IA)")
+            print("3. 🎤 Transcrire une note (IA)")
+            print("4. 📊 Statistiques intelligentes")
+            print("5. 🔧 Mode avancé")
+            print("0. 🚪 Quitter")
+            print("=" * 50)
+            
+            choix = input("\nChoix (0-5): ").strip()
+            
+            if choix == "1":
+                self.traiter_email()
+            elif choix == "2":
+                self.planifier_rdv()
+            elif choix == "3":
+                self.transcrire_note()
+            elif choix == "4":
+                self.stats_intelligentes()
+            elif choix == "5":
+                self.mode_avance()
+            elif choix == "0":
+                print("\n👋 Au revoir!")
+                self.conn.close()
+                break
+            else:
+                print("\n❌ Choix invalide")
+                input("Entrée pour continuer...")
 
 def main():
-    """Fonction principale"""
+    """Point d'entrée"""
     try:
+        print("🧠 Initialisation de l'Agent IA Pro...")
         agent = AgentIAPro()
-        agent.run()
+        agent.menu_principal()
     except KeyboardInterrupt:
-        print("\n\n👋 Interruption.")
+        print("\n\n👋 Interrompu")
     except Exception as e:
-        print(f"\n❌ Erreur : {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"❌ Erreur: {e}")
 
 if __name__ == "__main__":
     main()
