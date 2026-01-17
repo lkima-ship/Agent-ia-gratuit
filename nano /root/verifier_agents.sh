@@ -7,7 +7,7 @@ echo ""
 # 1. Compter les agents
 echo "1. STATISTIQUES :"
 py_count=$(ls /root/*.py 2>/dev/null | wc -l)
-agent_count=$(ls /root/agent*.py 2>/dev/null | wc -l)
+agent_count=$(ls /root/agent_*.py 2>/dev/null | wc -l)
 web_count=$(ls /root/*interface*.py 2>/dev/null | wc -l)
 menu_count=$(ls /root/*menu*.py 2>/dev/null | wc -l)
 
@@ -15,7 +15,6 @@ echo "    • Fichiers Python : $py_count"
 echo "    • Agents (agent_*) : $agent_count"
 echo "    • Interfaces web : $web_count"
 echo "    • Menus : $menu_count"
-echo ""
 echo ""
 
 # 2. Vérifier les exécutables
