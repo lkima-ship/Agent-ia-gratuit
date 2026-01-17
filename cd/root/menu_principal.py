@@ -1,3 +1,4 @@
+cat > /root/menu_principal.py << 'EOF'
 #!/usr/bin/env python3
 """
 Menu Principal - Système d'Agents IA - Version Améliorée
@@ -5,7 +6,6 @@ Menu Principal - Système d'Agents IA - Version Améliorée
 
 import os
 import sys
-import subprocess
 
 def afficher_stats():
     """Affiche les statistiques du système"""
@@ -21,7 +21,6 @@ def afficher_stats():
     print(f"📋 Menus: {len(menus)}")
     print(f"🖥️  Interfaces: {len([f for f in tous_python if 'interface' in f.lower()])}")
     
-    # Agents principaux
     print("\n🔍 AGENTS PRINCIPAUX:")
     for agent in ["hub_agents.py", "agent_web_avance.py", "menu_principal.py"]:
         if os.path.exists(f"/root/{agent}"):
@@ -119,3 +118,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+EOF
