@@ -7,7 +7,7 @@ echo ""
 # 1. Compter les agents
 echo "1. STATISTIQUES :"
 py_count=$(ls /root/*.py 2>/dev/null | wc -l)
-agent_count=$(ls /root/agent_*.py 2>/dev/null | wc -l)
+agent_count=$(ls /root/agent*.py 2>/dev/null | wc -l)
 web_count=$(ls /root/*interface*.py 2>/dev/null | wc -l)
 menu_count=$(ls /root/*menu*.py 2>/dev/null | wc -l)
 
@@ -15,6 +15,7 @@ echo "    • Fichiers Python : $py_count"
 echo "    • Agents (agent_*) : $agent_count"
 echo "    • Interfaces web : $web_count"
 echo "    • Menus : $menu_count"
+echo ""
 echo ""
 
 # 2. Vérifier les exécutables
@@ -41,14 +42,9 @@ for agent in "${important_agents[@]}"; do
     fi
 done
 
-# 4. Vérifier les agents en cours d'exécution
+# 4. Vérifier les ports utilisés
 echo ""
-echo "4. AGENTS ACTIFS :"
-ps aux | grep -E "python.*agent|python.*menu|python.*interface" | grep -v grep || echo "    Aucun agent actif détecté"
-echo ""
-
-# 5. Vérifier les ports utilisés
-echo "5. PORTS UTILISES :"
+echo "4. PORTS UTILISES :"
 if command -v netstat &> /dev/null; then
     netstat -tulpn 2>/dev/null | grep -E ":80|:8080|:5000|:8000" || echo "    Aucun port web actif"
 elif command -v ss &> /dev/null; then
