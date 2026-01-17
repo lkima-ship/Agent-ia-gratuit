@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "VERIFICATION DU SYSTEME D'AGENTS"
-echo "=============================="
+echo "================================="
 echo ""
 echo ""
 
@@ -19,21 +19,43 @@ echo ""
 
 # 2. Vérifier les exécutables
 echo "2. ✓ AGENTS EXÉCUTABLES :"
+count_exe=0
 for file in /root/*.py; do
     if [ -x "$file" ]; then
         echo "    ✓ $(basename "$file")"
+        count_exe=$((count_exe + 1))
     fi
-done  # <-- CECI ÉTAIT MANQUANT !
-
-# 3. Vérifier les agents en cours d'exécution
+done
+echo "    Total exécutables : $count_exe"
 echo ""
-echo "3. AGENTS ACTIFS :"
-ps aux | grep -E "python.*agent|python.*menu|python.*interface" | grep -v grep
 
-# 4. Vérifier les ports utilisés
+# 3. Agents principaux
+echo "3. ✓ AGENTS PRINCIPAUX :"
+important_agents=("menu_principal.py" "interface_agents_web.py" "hub_agents.py" "agent_ia_gratuit.py")
+
+for agent in "${important_agents[@]}"; do
+    if [ -f "/root/$agent" ]; then
+        echo "    ✓ $agent (présent)"
+    else
+        echo "    ✗ $agent (manquant)"
+    fi
+done
+
+# 4. Vérifier les agents en cours d'exécution
 echo ""
-echo "4. PORTS UTILISES :"
-netstat -tulpn 2>/dev/null | grep -E ":80|:8080|:5000|:8000" || echo "    (commande netstat non disponible)"
+echo "4. AGENTS ACTIFS :"
+ps aux | grep -E "python.*agent|python.*menu|python.*interface" | grep -v grep || echo "    Aucun agent actif détecté"
+echo ""
+
+# 5. Vérifier les ports utilisés
+echo "5. PORTS UTILISES :"
+if command -v netstat &> /dev/null; then
+    netstat -tulpn 2>/dev/null | grep -E ":80|:8080|:5000|:8000" || echo "    Aucun port web actif"
+elif command -v ss &> /dev/null; then
+    ss -tulpn 2>/dev/null | grep -E ":80|:8080|:5000|:8000" || echo "    Aucun port web actif"
+else
+    echo "    (netstat et ss non disponibles)"
+fi
 
 echo ""
 echo "Vérification terminée."
