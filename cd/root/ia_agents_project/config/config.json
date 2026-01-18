@@ -1,0 +1,16 @@
+cat > ai_agents_project/config/config.json << 'EOF'
+{
+    "api": {
+        "port": 5002,
+        "host": "0.0.0.0",
+        "debug": false
+    },
+    "agents": {
+        "auto_discover": true,
+        "scan_directory": "/root"
+    },
+    "security": {
+        "api_keys": ["admin_key_123", "user_key_456"]
+    }
+}
+EOF
