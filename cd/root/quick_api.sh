@@ -1,91 +1,116 @@
-# Recréer quick_api.sh avec plus de robustesse
+# Mettre à jour quick_api.sh avec plus de débogage
 cat > /root/quick_api.sh << 'EOF'
 #!/bin/sh
+
 API_SCRIPT="/root/simple_working.py"
 LOG_FILE="/tmp/flask.log"
+PID_FILE="/tmp/flask.pid"
+
+# Fonction pour vérifier si le port est en écoute
+check_port() {
+    netstat -tlnp 2>/dev/null | grep :5002 >/dev/null
+    return $?
+}
+
+# Fonction pour vérifier si Flask répond
+check_flask() {
+    curl -s --max-time 2 http://localhost:5002 >/dev/null 2>&1
+    return $?
+}
 
 case "$1" in
     on|start)
-        echo "▶️  Démarrage de l'API Flask..."
-        # Arrêter proprement
-        pkill -f "python3.*simple_working" 2>/dev/null
-        sleep 1
+        echo "🚀 Démarrage de l'API Flask..."
         
-        # Démarrer avec nohup et redirection
+        # Arrêter d'abord
+        $0 stop 2>/dev/null
+        
+        # Démarrer
+        cd /root
         nohup python3 "$API_SCRIPT" > "$LOG_FILE" 2>&1 &
-        PID=$!
-        echo $PID > /tmp/flask.pid
+        FLASK_PID=$!
+        echo $FLASK_PID > "$PID_FILE"
         
-        # Attendre un peu pour le démarrage
-        echo "Attente du démarrage (3s)..."
-        sleep 3
+        echo "Attente du démarrage (5 secondes)..."
+        for i in $(seq 1 10); do
+            if check_flask; then
+                echo "✅ API démarrée avec succès (PID: $FLASK_PID)"
+                echo "📝 Logs: $LOG_FILE"
+                echo "🌐 Test: curl http://localhost:5002"
+                exit 0
+            fi
+            sleep 0.5
+        done
         
-        # Vérifier si le processus tourne toujours
-        if kill -0 $PID 2>/dev/null; then
-            echo "✅ API démarrée (PID: $PID, Port: 5002)"
-            echo "Logs: $LOG_FILE"
-        else
-            echo "❌ Échec du démarrage. Voir logs:"
-            tail -20 "$LOG_FILE"
-        fi
+        # Si on arrive ici, l'API n'a pas démarré
+        echo "❌ L'API n'a pas démarré. Vérifiez les logs:"
+        tail -20 "$LOG_FILE"
+        exit 1
         ;;
         
     off|stop)
-        echo "⏹️  Arrêt de l'API..."
-        if [ -f /tmp/flask.pid ]; then
-            PID=$(cat /tmp/flask.pid)
+        echo "🛑 Arrêt de l'API..."
+        if [ -f "$PID_FILE" ]; then
+            PID=$(cat "$PID_FILE")
             kill $PID 2>/dev/null
             sleep 1
+            kill -9 $PID 2>/dev/null 2>&1
         fi
         pkill -f "python3.*simple_working" 2>/dev/null
-        rm -f /tmp/flask.pid
+        pkill -f "python.*simple_working" 2>/dev/null
+        rm -f "$PID_FILE"
         echo "✅ API arrêtée"
         ;;
         
     check|status)
-        if [ -f /tmp/flask.pid ] && kill -0 $(cat /tmp/flask.pid) 2>/dev/null; then
-            echo "🟢 API en cours (PID: $(cat /tmp/flask.pid))"
-            
-            # Tester la connexion
-            if curl -s --connect-timeout 2 http://localhost:5002 >/dev/null; then
-                echo "   ✅ Endpoint / accessible"
+        if [ -f "$PID_FILE" ] && ps -p $(cat "$PID_FILE") >/dev/null 2>&1; then
+            PID=$(cat "$PID_FILE")
+            if check_flask; then
+                echo "🟢 API en cours (PID: $PID) - Répond correctement"
             else
-                echo "   ⚠️  Endpoint / non accessible"
+                echo "🟡 API en cours (PID: $PID) mais ne répond pas au test"
             fi
         else
             echo "🔴 API arrêtée"
-            # Nettoyer le pid fichier s'il existe
-            rm -f /tmp/flask.pid
         fi
         ;;
         
     test)
-        echo "🧪 Test de l'API..."
-        if curl -s --max-time 5 http://localhost:5002; then
+        echo "🧪 Test de connexion à l'API..."
+        if check_flask; then
+            echo "✅ Connecté à l'API"
+            curl -s http://localhost:5002
             echo ""
         else
-            echo "❌ Aucune réponse de l'API"
+            echo "❌ Impossible de se connecter à l'API"
         fi
         ;;
         
     logs)
         if [ -f "$LOG_FILE" ]; then
-            tail -50 "$LOG_FILE"
+            echo "📋 Dernières lignes des logs:"
+            echo "----------------------------"
+            tail -30 "$LOG_FILE"
         else
             echo "Aucun fichier de log trouvé"
         fi
         ;;
         
-    restart)
-        echo "🔄 Redémarrage..."
+    debug)
+        echo "🐛 Mode debug - Exécution en premier plan:"
         $0 stop
-        sleep 2
-        $0 start
+        cd /root
+        python3 "$API_SCRIPT"
         ;;
         
     *)
-        echo "Usage: $0 {start|stop|restart|status|test|logs}"
-        echo "Alias: on, off, check"
+        echo "Usage: $0 {start|stop|status|test|logs|debug}"
+        echo "  start  - Démarrer l'API"
+        echo "  stop   - Arrêter l'API"
+        echo "  status - Vérifier l'état"
+        echo "  test   - Tester la connexion"
+        echo "  logs   - Afficher les logs"
+        echo "  debug  - Exécuter en mode debug (premier plan)"
         exit 1
         ;;
 esac
@@ -95,5 +120,4 @@ EOF
 chmod +x /root/quick_api.sh
 
 # Recréer le lien
-rm -f /usr/local/bin/api
 ln -sf /root/quick_api.sh /usr/local/bin/api
