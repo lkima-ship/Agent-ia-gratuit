@@ -1,0 +1,32 @@
+cat > /root/Dockerfile << 'EOF'
+FROM alpine:latest
+
+# Installer les dépendances
+RUN apk update && \
+    apk add --no-cache \
+    python3 \
+    py3-pip \
+    git \
+    curl \
+    bash \
+    vim
+
+# Créer la structure de l'application
+WORKDIR /app
+RUN mkdir -p src docs scripts config data
+
+# Installer les dépendances Python
+COPY requirements.txt .
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# Copier les fichiers sources
+COPY src/ ./src/
+COPY scripts/ ./scripts/
+COPY config/ ./config/
+
+# Port pour l'API Flask
+EXPOSE 5002
+
+# Commande par défaut
+CMD ["python3", "./src/main.py"]
+EOF
