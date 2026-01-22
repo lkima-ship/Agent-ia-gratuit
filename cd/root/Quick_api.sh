@@ -1,8 +1,8 @@
 # 1. Arrêter tout
 pkill -f python 2>/dev/null
-rm -f /tmp/flask.pid /tmp/flask.log
+rm -f /tmp/flask.log /tmp/flask.pid
 
-# 2. CRÉER LA NOUVELLE VERSION DE quick_api.sh
+# 2. RECRÉER LA NOUVELLE VERSION DE quick_api.sh
 cat > /root/quick_api.sh << 'EOF'
 #!/bin/sh
 
@@ -148,42 +148,16 @@ EOF
 # 3. RENDRE EXÉCUTABLE
 chmod +x /root/quick_api.sh
 
-# 4. FORCER LE RECHARGEMENT DU CACHE
+# 4. Mettre à jour la date
+touch /root/quick_api.sh
+
+# 5. Forcer le rechargement du cache
 hash -r
 
-# 5. CRÉER simple_working.py S'IL N'EXISTE PAS
-if [ ! -f /root/simple_working.py ]; then
-    cat > /root/simple_working.py << 'PYEOF'
-from flask import Flask, jsonify
-import os
-
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return jsonify({
-        "status": "success",
-        "message": "API Flask opérationnelle",
-        "version": "1.0"
-    })
-
-@app.route('/health')
-def health():
-    return jsonify({"status": "healthy", "service": "flask-api"})
-
-@app.route('/test')
-def test():
-    return jsonify({"test": "ok", "timestamp": "test réussi"})
-
-if __name__ == '__main__':
-    # Utiliser le port 5002
-    port = 5002
-    print(f"🚀 Démarrage de l'API Flask sur le port {port}...")
-    app.run(host='0.0.0.0', port=port, debug=False)
-PYEOF
-    echo "✅ Fichier /root/simple_working.py créé"
-fi
-
 # 6. TESTER
-echo "=== TEST FINAL ==="
+echo "=== VÉRIFICATION ==="
+echo "Date du fichier:"
+ls -la /root/quick_api.sh
+echo ""
+echo "=== TEST DES COMMANDES ==="
 api help
