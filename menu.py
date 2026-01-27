@@ -1,5 +1,7 @@
 cat > menu.py << 'EOF'
 #!/usr/bin/env python3
+# menu.py - Menu principal pour votre système IA
+
 import os
 import subprocess
 
@@ -110,8 +112,14 @@ def main():
                 
         elif choix == "6":
             print("\n🔄 Réorganisation des fichiers...")
-            # Vous pouvez réexécuter les commandes d'organisation ici
-            print("Cette fonctionnalité sera implémentée ultérieurement")
+            print("Exécution des commandes d'organisation...")
+            os.system("mkdir -p AGENTS APIS SCRIPTS WEB MENUS")
+            os.system("mv *agent*.py AGENTS/ 2>/dev/null || true")
+            os.system("mv *api*.py *flask*.py APIS/ 2>/dev/null || true")
+            os.system("mv *.sh SCRIPTS/ 2>/dev/null || true")
+            os.system("mv *.html *.htm WEB/ 2>/dev/null || true")
+            os.system("mv menu_*.py MENUS/ 2>/dev/null || true")
+            print("✅ Fichiers réorganisés!")
             
         elif choix == "7":
             print("\n👋 Au revoir!")
