@@ -1,4 +1,7 @@
-# Effacer l'ancien fichier et créer une version correcte
+# Supprimer l'ancien fichier
+rm super_agent.py
+
+# Créer un nouveau fichier propre
 cat > super_agent.py << 'EOF'
 #!/usr/bin/env python3
 """
