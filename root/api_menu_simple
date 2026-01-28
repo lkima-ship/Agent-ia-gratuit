@@ -1,0 +1,184 @@
+cat > /root/api_menu.py << 'EOF'
+#!/usr/bin/env python3
+"""
+Menu API simple - Commandes faciles 1-2-3
+"""
+import os
+import sys
+import subprocess
+import time
+
+def clear_screen():
+    """Efface l'écran"""
+    os.system('clear' if os.name == 'posix' else 'cls')
+
+def check_api():
+    """Vérifie si l'API est en cours d'exécution"""
+    try:
+        result = subprocess.run(
+            ['curl', '-s', '--max-time', '2', 'http://localhost:5000'],
+            capture_output=True,
+            text=True
+        )
+        return result.returncode == 0
+    except:
+        return False
+
+def start_api():
+    """Démarre l'API"""
+    print("1️⃣  Démarrage de l'API...")
+    
+    # Arrête d'abord si déjà en cours
+    subprocess.run(['pkill', '-f', 'simple_api.py'], 
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    time.sleep(1)
+    
+    # Démarre l'API
+    result = subprocess.Popen(
+        ['cd', '/root', '&&', 'python3', 'simple_api.py', '&'],
+        shell=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+    
+    print("⏳ Veuillez patienter 3 secondes...")
+    time.sleep(3)
+    
+    if check_api():
+        print("✅ API démarrée avec succès!")
+        print("🌐 Adresse: http://localhost:5000")
+    else:
+        print("❌ Échec du démarrage de l'API")
+    
+    input("\n⏎ Appuyez sur Entrée pour continuer...")
+
+def stop_api():
+    """Arrête l'API"""
+    print("2️⃣  Arrêt de l'API...")
+    subprocess.run(['pkill', '-f', 'simple_api.py'], 
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    print("✅ API arrêtée")
+    time.sleep(1)
+    input("\n⏎ Appuyez sur Entrée pour continuer...")
+
+def test_api():
+    """Teste l'API"""
+    print("3️⃣  Test de l'API...")
+    
+    if check_api():
+        print("🟢 API connectée!")
+        
+        # Affiche la réponse
+        result = subprocess.run(
+            ['curl', '-s', 'http://localhost:5000'],
+            capture_output=True,
+            text=True
+        )
+        print(f"📦 Réponse: {result.stdout[:100]}...")
+        
+        # Test des agents
+        result = subprocess.run(
+            ['curl', '-s', 'http://localhost:5000/agents'],
+            capture_output=True,
+            text=True
+        )
+        print(f"🤖 Agents: {result.stdout[:100]}...")
+    else:
+        print("🔴 API non connectée")
+    
+    input("\n⏎ Appuyez sur Entrée pour continuer...")
+
+def main_menu():
+    """Menu principal"""
+    while True:
+        clear_screen()
+        
+        print("=" * 50)
+        print("🚀 MENU API - Commandes simples 1-2-3")
+        print("=" * 50)
+        
+        # Statut de l'API
+        api_status = "🟢 EN COURS" if check_api() else "🔴 ARRÊTÉE"
+        print(f"\n📊 Statut actuel: {api_status}")
+        
+        print("\n" + "=" * 50)
+        print("1️⃣  DÉMARRER l'API")
+        print("2️⃣  ARRÊTER l'API")
+        print("3️⃣  TESTER l'API")
+        print("4️⃣  AFFICHER l'URL")
+        print("5️⃣  MENU AGENTS")
+        print("0️⃣  QUITTER")
+        print("=" * 50)
+        
+        choix = input("\n👉 Votre choix (0-5): ").strip()
+        
+        if choix == "1":
+            start_api()
+        elif choix == "2":
+            stop_api()
+        elif choix == "3":
+            test_api()
+        elif choix == "4":
+            print("\n🌐 URL de l'API: http://localhost:5000")
+            print("📁 Endpoints:")
+            print("  - http://localhost:5000/")
+            print("  - http://localhost:5000/agents")
+            input("\n⏎ Appuyez sur Entrée pour continuer...")
+        elif choix == "5":
+            # Ouvre le menu des agents
+            print("\n🤖 Ouverture du menu des agents...")
+            time.sleep(1)
+            os.system('python3 /root/menu_avance.py')
+        elif choix == "0":
+            print("\n👋 Au revoir!")
+            break
+        else:
+            print("❌ Choix invalide!")
+            time.sleep(1)
+
+if __name__ == "__main__":
+    # Vérifie que simple_api.py existe
+    if not os.path.exists("/root/simple_api.py"):
+        print("❌ Fichier simple_api.py non trouvé!")
+        print("📝 Création du fichier API...")
+        
+        # Crée le fichier API
+        with open("/root/simple_api.py", "w") as f:
+            f.write("""#!/usr/bin/env python3
+from flask import Flask, jsonify
+import os
+
+app = Flask(__name__)
+
+@app.route('/')
+def hello():
+    return jsonify({
+        "message": "API Flask en ligne!",
+        "status": "OK",
+        "port": 5000
+    })
+
+@app.route('/agents')
+def agents():
+    import glob
+    agents_list = [f for f in glob.glob("*.py") if 'menu' not in f]
+    return jsonify({"agents": agents_list})
+
+if __name__ == '__main__':
+    print("🚀 API Flask démarre sur http://localhost:5000")
+    app.run(host='0.0.0.0', port=5000, debug=False)
+""")
+        
+        print("✅ Fichier API créé!")
+        time.sleep(2)
+    
+    # Vérifie Flask
+    try:
+        import flask
+    except ImportError:
+        print("📦 Installation de Flask...")
+        os.system("pip3 install flask 2>/dev/null || pip install flask 2>/dev/null")
+    
+    # Lance le menu
+    main_menu()
+EOF
