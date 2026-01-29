@@ -76,3 +76,53 @@ while True:
         print("❌ Choix invalide !")
         input("Appuyez sur Entrée pour continuer...")
 EOF
+# Ajoute ces fonctionnalités à ton menu existant
+
+def lancer_tous_agents():
+    """Lancer tous les agents en une seule commande"""
+    print("\n" + "="*40)
+    print("LANCEMENT DE TOUS LES AGENTS")
+    print("="*40)
+    
+    agents = sorted([f for f in os.listdir("/root") 
+                    if f.startswith("agent_") and f.endswith(".py")])
+    
+    if not agents:
+        print("❌ Aucun agent trouvé")
+        return
+    
+    print(f"Nombre d'agents à lancer: {len(agents)}")
+    
+    for agent in agents:
+        print(f"  → Lancement de {agent}...")
+        os.system(f"python3 /root/{agent} > /tmp/{agent}.log 2>&1 &")
+        time.sleep(0.5)
+    
+    print(f"\n✅ {len(agents)} agents lancés en arrière-plan")
+    print("📝 Logs: /tmp/agent_*.log")
+
+def afficher_processus():
+    """Afficher les processus agents en cours"""
+    print("\n" + "="*40)
+    print("PROCESSUS EN COURS")
+    print("="*40)
+    os.system("ps aux | grep 'python3.*agent_' | grep -v grep")
+
+def arreter_agents():
+    """Arrêter tous les agents"""
+    print("\n" + "="*40)
+    print("ARRÊT DES AGENTS")
+    print("="*40)
+    
+    agents_actifs = os.popen("ps aux | grep 'python3.*agent_' | grep -v grep | wc -l").read().strip()
+    print(f"Agents actifs: {agents_actifs}")
+    
+    if agents_actifs != "0":
+        confirm = input("Voulez-vous arrêter tous les agents? (o/n): ")
+        if confirm.lower() == 'o':
+            os.system("pkill -f 'python3.*agent_'")
+            print("✅ Tous les agents arrêtés")
+        else:
+            print("❌ Annulé")
+    else:
+        print("ℹ️ Aucun agent en cours d'exécution")
